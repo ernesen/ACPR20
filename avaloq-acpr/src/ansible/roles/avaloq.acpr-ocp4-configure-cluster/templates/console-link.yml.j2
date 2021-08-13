@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: List
+items:
+{% for k,v in console_links.items() %}
+{% for i in v %}
+- apiVersion: console.openshift.io/v1
+  kind: ConsoleLink
+  metadata:
+    name: "{{ i.text|lower|regex_replace('\ ','-')  }}-{{ i.section|default('none')|hash('sha256')|truncate(8, True, '') }}"
+    labels:
+      app.kubernetes.io/managed-by: avaloq-acpr
+  spec:
+{% if i.section is defined or (i.imageurl is defined and i.section is defined) %}
+    {{ k[0].lower() + k[1:] }}:
+{% if i.imageurl is defined %}
+      imageURL: '{{ i.imageurl }}'
+{% endif %}
+      section: '{{ i.section }}'
+{% endif %}
+    href: '{{ i.url }}'
+    location: '{{ k }}'
+    text: '{{ i.text }}'
+{% endfor %}
+{% endfor %}

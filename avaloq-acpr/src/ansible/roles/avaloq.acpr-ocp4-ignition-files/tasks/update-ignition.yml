@@ -1,0 +1,39 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Set OCP4 installer working directory
+  set_fact:
+    acpr_ocp4_installer_wd: "{{ avq_acpr_home }}{{ os_cluster_name }}"
+
+- name: Get api-int certificate
+  get_certificate:
+    host: 'api-int.{{ os_cluster_name }}'
+    port: 22623
+  register: apiurl
+
+- name: Modify the worker ignition file
+  replace:
+    path: '{{ acpr_ocp4_installer_wd }}/worker.ign'
+    regexp: 'base64,[a-zA-Z0-9+\/=]+'
+    replace: 'base64,{{ apiurl.cert | string | b64encode }}'
+    backup: yes
+
+- name: Copy ignition files
+  become: true
+  copy:
+    src: '{{ acpr_ocp4_installer_wd }}/worker.ign'
+    dest: "{{ acpr_webserver_ignition_file_path }}"
+    owner: root
+    mode: '0644'
+  when: acpr_serve_ignition_files | bool

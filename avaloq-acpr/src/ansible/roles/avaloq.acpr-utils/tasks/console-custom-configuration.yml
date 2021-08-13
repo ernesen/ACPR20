@@ -1,0 +1,61 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Create custom template only if custom logo defined
+  block:
+    - name: Create '/etc/origin/master/templates' directory
+      file:
+        path: /etc/origin/master/templates
+        owner: root
+        group: root
+        mode: 0750
+        state: directory
+
+    - name: Copy web console templates
+      template:
+        src: web_console_templates/login-template.j2
+        dest: /etc/origin/master/templates/login-template.html
+      notify:
+        - Restart MasterAPI
+
+    - name: Insert custom templates configration
+      blockinfile:
+        path: /etc/origin/master/master-config.yaml
+        marker: '# {mark} ACPR: custom templates'
+        block: |2
+            templates:
+              login: /etc/origin/master/templates/login-template.html
+        insertafter: '^oauthConfig:'
+      notify:
+        - Restart MasterAPI
+  when:
+    - acpr_branding_configuration is defined
+    - acpr_branding_configuration['images'] is defined
+    - acpr_branding_configuration['images']['logo'] is defined
+
+- name: Customize oc cli links
+  block:
+      ## Sed to replace scriptURLs: [] to the script defined in acpr_branding_configuration['links']['javascript']
+      ## only if it is an empty array in origin, it will not overwrite if any javascript is previously configured.
+    - name: Export configmap
+      shell: "oc --match-server-version=true -n openshift-web-console get cm webconsole-config -o yaml --export | sed '/last\\-applied\\-configuration/,/^/d' | sed -e 's/scriptURLs\\:\\ \\[\\].*/scriptURLs:\\n        - {{ acpr_branding_configuration['links']['javascript'] | regex_escape() }}/g' > /tmp/webconsole-configmap.yml"
+    - name: Apply configmap
+      command: "oc --match-server-version=true -n openshift-web-console replace -f /tmp/webconsole-configmap.yml"
+    - name: Restart pods
+      command: "oc --match-server-version=true -n openshift-web-console delete pods -l app=openshift-web-console"
+  when:
+    - acpr_branding_configuration is defined
+    - acpr_branding_configuration['links'] is defined
+    - acpr_branding_configuration['links']['javascript'] is defined
+  run_once: true

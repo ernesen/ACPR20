@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: {%if acpr_self_provisioners|bool %}"true"{% else %}"false"{% endif -%}{{''}}
+  name: self-provisioners
+{% if acpr_self_provisioners|bool %}
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:authenticated:oauth
+{% else %}
+subjects: null
+{% endif %}

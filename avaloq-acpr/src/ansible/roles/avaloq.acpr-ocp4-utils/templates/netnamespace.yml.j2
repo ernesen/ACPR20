@@ -1,0 +1,8 @@
+apiVersion: network.openshift.io/v1
+kind: NetNamespace
+egressIPs:
+- '{{ item.ip }}'
+metadata:
+  name: '{{ item.namespace }}'
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr

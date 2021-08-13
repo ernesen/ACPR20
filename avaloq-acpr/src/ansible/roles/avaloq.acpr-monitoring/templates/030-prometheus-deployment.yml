@@ -1,0 +1,367 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+
+  ### Route
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      name: prometheus
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+{% if acpr_monitoring_prometheus_hostname is defined %}
+      host: {{ acpr_monitoring_prometheus_hostname }}
+{% endif %}
+      port:
+        targetPort: prometheus
+      tls:
+        destinationCACertificate: "-----BEGIN COMMENT-----\nThis is an empty PEM file
+        created to provide backwards compatibility\nfor reencrypt routes that have no
+        destinationCACertificate. This \ncontent will only appear for routes accessed
+        via /oapi/v1/routes.\n-----END COMMENT-----\n"
+        insecureEdgeTerminationPolicy: Redirect
+        termination: reencrypt
+      to:
+        kind: Service
+        name: prometheus
+        weight: 100
+      wildcardPolicy: None
+
+  ### Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: prometheus
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      name: prometheus
+      annotations:
+        service.alpha.openshift.io/serving-cert-secret-name: prometheus-tls
+    spec:
+      ports:
+        - name: prometheus
+          port: 443
+          protocol: TCP
+          targetPort: 8443
+      selector:
+        app: prometheus
+      sessionAffinity: None
+      type: ClusterIP
+
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: prometheus-direct
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      name: prometheus-direct
+    spec:
+      ports:
+        - name: prometheus
+          port: 9090
+          protocol: TCP
+          targetPort: 9090
+      selector:
+        app: prometheus
+      sessionAffinity: None
+      type: ClusterIP
+
+  ### ServiceAccount
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: prometheus
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      annotations:
+        serviceaccounts.openshift.io/oauth-redirectreference.prom: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"prometheus"}}'
+
+  ### ClusterRoleBinding
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: prometheus-acpr-monitoring-cluster-reader
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-reader
+    subjects:
+      - kind: ServiceAccount
+        name: prometheus
+        namespace: {{ namespace }}
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: prometheus-acpr-monitoring-auth-delegator
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:auth-delegator
+    subjects:
+      - kind: ServiceAccount
+        name: prometheus
+        namespace: {{ namespace }}
+
+  ### NetworkPolicy
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: prometheus
+      namespace: {{ namespace }}
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      ingress:
+        - ports:
+            - port: 8443
+              protocol: TCP
+            - port: 9090
+              protocol: TCP
+          from:
+            - podSelector:
+                matchLabels:
+                  app: grafana
+            - podSelector:
+                matchLabels:
+                  app: avaloq-prometheus-rule-provisioner
+        - ports:
+            - port: 8443
+              protocol: TCP
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  network.openshift.io/policy-group: ingress
+{% if acpr_monitoring_prometheus_additional_network_policy_namespace_selector is defined %}
+{% for namespace_selector in acpr_monitoring_prometheus_additional_network_policy_namespace_selector %}
+            - namespaceSelector:
+                matchLabels:
+                  name: {{ namespace_selector }}
+{% endfor %}
+{% endif %}
+      podSelector:
+        matchLabels:
+          app: prometheus
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: default-deny-all
+      namespace: {{ namespace }}
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      podSelector: {}
+      policyTypes:
+        - Ingress
+
+  ### StatefulSet
+  - apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      labels:
+        app: prometheus
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+        avaloq.com/zone: core-internal
+      name: prometheus
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: prometheus
+      serviceName: monitoring
+      template:
+        metadata:
+          labels:
+            app: prometheus
+            avaloq.com/app: acpr-monitoring
+            app.kubernetes.io/component: monitoring
+          name: prometheus
+        spec:
+          containers:
+            - args:
+                - '-provider=openshift'
+                - '-https-address=:8443'
+                - '-http-address='
+                - '-email-domain=*'
+                - '-upstream=http://localhost:9090'
+                - '-htpasswd-file=/etc/proxy/htpasswd/auth'
+{% if acpr_monitoring_prometheus_additional_auth.htpasswd.hidden %}
+                - '-display-htpasswd-form=false'
+{% endif %}
+                - '-openshift-ca=/etc/pki/tls/cert.pem'
+                - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+                #- '-openshift-sar={name="acpr-monitoring", "resource": "namespaces", "verb": "get"}'
+{% if acpr_monitoring_prometheus_additional_auth.serviceaccounts.enabled %}
+                - '-openshift-delegate-urls={"/": {"namespace":"acpr-monitoring", "resource":"services", "name":"prometheus", "verb": "get"}}'
+{% endif %}
+                - '-openshift-service-account=prometheus'
+                - '-tls-cert=/etc/tls/private/tls.crt'
+                - '-tls-key=/etc/tls/private/tls.key'
+                - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+                - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+                - '-skip-auth-regex=^/-/healthy'
+                - '-skip-auth-regex=^/metrics'
+                - '-cookie-expire=4h'
+              image: {{ acpr_monitoring_oauth_proxy_image }}
+              imagePullPolicy: IfNotPresent
+              name: prometheus-proxy
+              ports:
+                - containerPort: 8443
+                  name: web
+                  protocol: TCP
+{% if acpr_monitoring_prometheus_proxy_resources_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_prometheus_proxy_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_prometheus_proxy_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_prometheus_proxy_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_prometheus_proxy_resources_request_memory }}
+{% endif %}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+                - mountPath: /etc/tls/private
+                  name: prometheus-tls
+                - mountPath: /etc/proxy/secrets
+                  name: prometheus-secrets
+                - mountPath: /etc/proxy/htpasswd
+                  name: prometheus-htpasswd
+                - mountPath: /prometheus
+                  name: prometheus-data
+            - args:
+                - '--storage.tsdb.retention={{ acpr_monitoring_prometheus_database_retention }}'
+                - '--config.file=/etc/prometheus/prometheus.yml'
+                - '--web.enable-lifecycle'
+                - '--web.listen-address=:9090'
+                - '--log.level=info'
+              image: {{ acpr_monitoring_prometheus_image }}
+              imagePullPolicy: IfNotPresent
+              name: prometheus
+              ports:
+                - containerPort: 9090
+                  name: web
+                  protocol: TCP
+{% if acpr_monitoring_prometheus_resources_request_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_prometheus_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_prometheus_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_prometheus_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_prometheus_resources_request_memory }}
+{% endif %}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+                - mountPath: /etc/prometheus
+                  name: prometheus-config
+                - mountPath: /prometheus
+                  name: prometheus-data
+                - mountPath: /etc/pki/etcd
+                  name: etcd-auth
+                - mountPath: /etc/prometheus/rules
+                  name: prometheus-rules
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccount: prometheus
+          serviceAccountName: prometheus
+          terminationGracePeriodSeconds: 30
+          nodeSelector:
+{% if acpr_monitoring_prometheus_node_selector is defined %}
+            kubernetes.io/hostname: {{ acpr_monitoring_prometheus_node_selector }}
+{% else %}
+            node-role.kubernetes.io/compute: "true"
+{% endif %}
+          volumes:
+            - configMap:
+                defaultMode: 420
+                name: prometheus
+              name: prometheus-config
+            - name: prometheus-secrets
+              secret:
+                defaultMode: 420
+                secretName: prometheus-proxy
+            - name: prometheus-htpasswd
+              secret:
+                defaultMode: 420
+                secretName: prometheus-htpasswd
+            - name: etcd-auth
+              secret:
+                defaultMode: 420
+                secretName: etcd-client-certs
+            - name: prometheus-tls
+              secret:
+                defaultMode: 420
+                secretName: prometheus-tls
+            - name: prometheus-data
+              persistentVolumeClaim:
+                claimName: {{ acpr_monitoring_prometheus_persistent_volume_claim }}
+            - name: prometheus-rules
+              persistentVolumeClaim:
+                claimName: prometheus-rules-volume
+
+  ### PersistentVolumeClaim
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: prometheus-data
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      accessModes:
+{% for access_mode in acpr_monitoring_prometheus_pvc_access_modes_data %}
+        - {{ access_mode }}
+{% endfor %}
+      resources:
+        requests:
+          storage: {{ acpr_monitoring_prometheus_pvc_size_request_data }}
+{% if acpr_monitoring_prometheus_pvc_storage_class_name_data is defined %}
+      storageClassName: {{ acpr_monitoring_prometheus_pvc_storage_class_name_data }}
+{% endif %}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: prometheus-rules-volume
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      accessModes:
+        - ReadWriteMany
+      resources:
+        requests:
+          storage: {{ acpr_monitoring_prometheus_pvc_size_request_rule }}
+{% if acpr_monitoring_prometheus_pvc_storage_class_name_rule is defined %}
+      storageClassName: {{ acpr_monitoring_prometheus_pvc_storage_class_name_rule }}
+{% endif %}

@@ -1,0 +1,62 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: Check acpr_webserver_ignition_file_path consistency
+  fail:
+    msg: acpr_webserver.document_root is not part of acpr_webserver_ignition_file_path.
+  when: acpr_webserver.document_root not in acpr_webserver_ignition_file_path
+
+- name: Install apache
+  yum:
+    name: httpd
+    state: present
+
+- name: Remove default welcome configuration
+  copy:
+    dest: /etc/httpd/conf.d/welcome.conf
+    content: '# This file is managed by ACPR'
+    mode: preserve
+  notify:
+    - reload httpd
+
+- name: Prepare for custom document_root
+  block:
+    - name: httpd templating
+      template:
+        src: "httpd.conf.j2"
+        dest: /etc/httpd/conf/httpd.conf
+        mode: 0644
+      notify:
+        - reload httpd
+    - name: Setting new settype
+      sefcontext:
+        target: '{{ acpr_webserver.document_root }}(/.*)?'
+        setype: httpd_sys_content_t
+        state: present
+  when: '"/var/www/html" != acpr_webserver.document_root'
+
+- name: Create web folder for ignition files
+  file:
+    path: '{{ acpr_webserver_ignition_file_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Enable & start apache
+  service:
+    name: httpd
+    state: started
+    enabled: true

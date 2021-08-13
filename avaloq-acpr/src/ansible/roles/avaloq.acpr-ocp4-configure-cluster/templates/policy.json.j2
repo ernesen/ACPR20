@@ -1,0 +1,59 @@
+{
+  "default": [
+    {
+      "type": "{% if acpr_container_images_signature_verification | bool %}reject{% else %}insecureAcceptAnything{% endif %}"
+    }
+  ],
+  "transports": {
+    "docker": {
+      "quay.io": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]{% if pull_secret_registries | length > 0 or acpr_container_images_registries.items() | length > 0 %},{% endif %}
+{% for k, v in acpr_container_images_registries.items() | sort %}
+      "{{ v['host'].split('/')[0] }}": [
+        {
+          "type": "{{ v['trust_type'] }}"{% if v['trust_type'] == "signedBy" %},{% endif %}
+
+{% if v['trust_type'] == "signedBy" %}
+          "keyType": "GPGKeys",
+{% if v['pubkeys'][0] is defined %}
+          "keyData": "{{ v['pubkeys'][0] | b64encode }}"
+{% elif v['keypath'] is defined %}
+          "keyPath": "{{ v['keypath'] }}"
+{% endif %}
+{% endif %}
+        }
+      ]{% if not loop.last %},{% endif %}{% if loop.last and pull_secret_registries | length > 0 %},{% endif %}
+
+{% if v['namespace_configuration'] is defined %}
+{% for d in v['namespace_configuration'] %}
+      "{{ v['host'].split('/')[0] + '/' + d['name'] }}": [
+        {
+          "type": "{{ d['trust_type'] }}"{% if d['trust_type'] == "signedBy" %},{% endif %}
+
+{% if d['trust_type'] == "signedBy" %}
+          "keyType": "GPGKeys",
+{% if d['pubkeys'][0] is defined %}
+          "keyData": "{{ d['pubkeys'][0] | default(d['pubkeys'][0]) | b64encode }}"
+{% elif d['keypath'] is defined %}
+          "keyPath": "{{ d['keypath'] }}"
+{% endif %}
+{% endif %}
+        }
+      ],
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% for v in pull_secret_registries | sort %}
+      "{{ v }}": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]{% if not loop.last %},{% endif %}
+{% endfor %}
+
+    }
+  }
+}

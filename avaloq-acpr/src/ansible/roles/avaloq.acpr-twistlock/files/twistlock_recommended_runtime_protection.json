@@ -1,0 +1,110 @@
+{
+  "_id": "containerRuntime",
+  "rules": [
+    {
+      "modified": "2019-09-05T16:17:51.98Z",
+      "owner": "admin",
+      "name": "Recommended RunTime Protection Rules",
+      "previousName": "",
+      "resources": {
+        "hosts": [
+          "*"
+        ],
+        "images": [
+          "*"
+        ],
+        "labels": [
+          "*"
+        ],
+        "containers": [
+          "*"
+        ]
+      },
+      "advancedProtection": true,
+      "processes": {
+        "effect": "alert",
+        "blacklist": [],
+        "whitelist": [],
+        "checkCryptoMiners": true,
+        "checkLateralMovement": true,
+        "checkParentChild": true
+      },
+      "syscalls": {
+        "effect": "alert",
+        "staticProfiles": false,
+        "whitelist": [],
+        "blacklist": []
+      },
+      "network": {
+        "effect": "alert",
+        "blacklistIPs": [],
+        "blacklistListeningPorts": [],
+        "whitelistListeningPorts": [],
+        "blacklistOutboundPorts": [],
+        "whitelistOutboundPorts": [],
+        "whitelistIPs": [],
+        "detectPortScan": true
+      },
+      "dns": {
+        "effect": "alert",
+        "whitelist": [],
+        "blacklist": []
+      },
+      "filesystem": {
+        "effect": "alert",
+        "blacklist": [
+          "/",
+          "/bin",
+          "/sbin",
+          "/etc"
+        ],
+        "whitelist": [
+          "/opt/avaloq"
+        ],
+        "checkNewFiles": true,
+        "backdoorFiles": true
+      },
+      "kubernetes": {
+        "enabled": true
+      },
+      "customRules": [
+        {
+          "_id": 15,
+          "action": "audit",
+          "effect": "alert"
+        },
+        {
+          "_id": 16,
+          "action": "audit",
+          "effect": "alert"
+        },
+        {
+          "_id": 19,
+          "action": "audit",
+          "effect": "alert"
+        },
+        {
+          "_id": 20,
+          "action": "audit",
+          "effect": "alert"
+        },
+        {
+          "_id": 22,
+          "action": "audit",
+          "effect": "alert"
+        },
+        {
+          "_id": 24,
+          "action": "audit",
+          "effect": "alert"
+        },
+        {
+          "_id": 25,
+          "action": "audit",
+          "effect": "alert"
+        }
+      ]
+    }
+  ],
+  "learningDisabled": false
+}

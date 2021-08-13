@@ -1,0 +1,1622 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 737515,
+  "iteration": 1585756016,
+  "links": [],
+  "panels": [
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 10,
+        "minValue": 0,
+        "show": true,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "twistlock_active_defenders{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "twistlock_active_defenders",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 10,
+        "minValue": 0,
+        "show": true,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 7,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(210, 120, 28, 0.18)",
+        "full": false,
+        "lineColor": "rgb(213, 183, 28)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "twistlock_active_app_firewalls{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "twistlock_active_app_firewalls",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 10,
+        "minValue": 0,
+        "show": true,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 8,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "twistlock_total_defenders{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "twistlock_total_defenders",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": true,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 9,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 210, 123, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 220, 120)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "twistlock_protected_containers{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "twistlock_protected_containers",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "DS-Prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 2,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_access_events",
+          "color": "#EAE95E"
+        },
+        {
+          "alias": "twistlock_app_firewall_events",
+          "color": "#F3A533"
+        },
+        {
+          "alias": "twistlock_defender_events",
+          "color": "#B969FB"
+        },
+        {
+          "alias": "twistlock_api_requests",
+          "color": "#48EE3E"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "increase(twistlock_access_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_access_events",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(twistlock_app_firewall_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_app_firewall_events",
+          "refId": "B"
+        },
+        {
+          "expr": "increase(twistlock_defender_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_defender_events",
+          "refId": "E"
+        },
+        {
+          "expr": "increase(twistlock_api_requests{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_api_requests",
+          "refId": "H"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Twistlock Main Events / minute",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "DS-Prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 19,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_container_network_firewall_events",
+          "color": "#D4EC47"
+        },
+        {
+          "alias": "twistlock_container_runtime_events",
+          "color": "#1EC437"
+        },
+        {
+          "alias": "twistlock_host_network_firewall_events",
+          "color": "#ECBA47"
+        },
+        {
+          "alias": "twistlock_host_runtime_events",
+          "color": "#4B99D9"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "increase(twistlock_container_network_firewall_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_container_network_firewall_events",
+          "refId": "C"
+        },
+        {
+          "expr": "increase(twistlock_container_runtime_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_container_runtime_events",
+          "refId": "D"
+        },
+        {
+          "expr": "increase(twistlock_host_network_firewall_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_host_network_firewall_events",
+          "refId": "F"
+        },
+        {
+          "expr": "increase(twistlock_host_runtime_events{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_host_runtime_events",
+          "refId": "G"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Twistlock Containers-Hosts Events / minute",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 12,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_hosts_low_compliance",
+          "color": "#6DDD8E"
+        },
+        {
+          "alias": "twistlock_hosts_medium_compliance",
+          "color": "#40ABD9"
+        },
+        {
+          "alias": "twistlock_hosts_high_compliance",
+          "color": "#C594D0"
+        },
+        {
+          "alias": "twistlock_hosts_critical_compliance",
+          "color": "#E61090"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_hosts_low_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_low_compliance",
+          "refId": "A"
+        },
+        {
+          "expr": "twistlock_hosts_medium_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_medium_compliance",
+          "refId": "C"
+        },
+        {
+          "expr": "twistlock_hosts_high_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_high_compliance",
+          "refId": "E"
+        },
+        {
+          "expr": "twistlock_hosts_critical_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_critical_compliance",
+          "refId": "G"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Hosts Compliance Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "DS-Prometheus",
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 15,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_hosts_low_vulnerabilities",
+          "color": "#8AF366"
+        },
+        {
+          "alias": "twistlock_hosts_medium_vulnerabilities",
+          "color": "#F6DD58"
+        },
+        {
+          "alias": "twistlock_hosts_high_vulnerabilities",
+          "color": "#FF713C"
+        },
+        {
+          "alias": "twistlock_hosts_critical_vulnerabilities",
+          "color": "#F52F1B"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_hosts_low_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_low_vulnerabilities",
+          "refId": "B"
+        },
+        {
+          "expr": "twistlock_hosts_medium_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_medium_vulnerabilities",
+          "refId": "D"
+        },
+        {
+          "expr": "twistlock_hosts_high_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_high_vulnerabilities",
+          "refId": "F"
+        },
+        {
+          "expr": "twistlock_hosts_critical_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_hosts_critical_vulnerabilities",
+          "refId": "H"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Hosts Vulnerabilities Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 11,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_containers_low_compliance",
+          "color": "#6DDD8E"
+        },
+        {
+          "alias": "twistlock_containers_medium_compliance",
+          "color": "#40ABD9"
+        },
+        {
+          "alias": "twistlock_containers_high_compliance",
+          "color": "#C594D0"
+        },
+        {
+          "alias": "twistlock_containers_critical_compliance",
+          "color": "#E61090"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_containers_low_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_low_compliance",
+          "refId": "A"
+        },
+        {
+          "expr": "twistlock_containers_medium_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_medium_compliance",
+          "refId": "C"
+        },
+        {
+          "expr": "twistlock_containers_high_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_high_compliance",
+          "refId": "E"
+        },
+        {
+          "expr": "twistlock_containers_critical_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_critical_compliance",
+          "refId": "G"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Containers Compliance Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 16,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_containers_low_vulnerabilities",
+          "color": "#8AF366"
+        },
+        {
+          "alias": "twistlock_containers_medium_vulnerabilities",
+          "color": "#F6DD58"
+        },
+        {
+          "alias": "twistlock_containers_high_vulnerabilities",
+          "color": "#FF713C"
+        },
+        {
+          "alias": "twistlock_containers_critical_vulnerabilities",
+          "color": "#F52F1B"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_containers_low_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_low_vulnerabilities",
+          "refId": "B"
+        },
+        {
+          "expr": "twistlock_containers_medium_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_medium_vulnerabilities",
+          "refId": "D"
+        },
+        {
+          "expr": "twistlock_containers_high_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_high_vulnerabilities",
+          "refId": "F"
+        },
+        {
+          "expr": "twistlock_containers_critical_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_containers_critical_vulnerabilities",
+          "refId": "H"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Containers Vulnerabilities Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 13,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_images_low_compliance",
+          "color": "#6DDD8E"
+        },
+        {
+          "alias": "twistlock_images_medium_compliance",
+          "color": "#40ABD9"
+        },
+        {
+          "alias": "twistlock_images_high_compliance",
+          "color": "#C594D0"
+        },
+        {
+          "alias": "twistlock_images_critical_compliance",
+          "color": "#E61090"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_images_low_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_low_compliance",
+          "refId": "A"
+        },
+        {
+          "expr": "twistlock_images_medium_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_medium_compliance",
+          "refId": "C"
+        },
+        {
+          "expr": "twistlock_images_high_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_high_compliance",
+          "refId": "E"
+        },
+        {
+          "expr": "twistlock_images_critical_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_critical_compliance",
+          "refId": "G"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Images Compliance Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 17,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_images_low_vulnerabilities",
+          "color": "#8AF366"
+        },
+        {
+          "alias": "twistlock_images_medium_vulnerabilities",
+          "color": "#F6DD58"
+        },
+        {
+          "alias": "twistlock_images_high_vulnerabilities",
+          "color": "#FF713C"
+        },
+        {
+          "alias": "twistlock_images_critical_vulnerabilities",
+          "color": "#F52F1B"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_images_low_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_low_vulnerabilities",
+          "refId": "B"
+        },
+        {
+          "expr": "twistlock_images_medium_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_medium_vulnerabilities",
+          "refId": "D"
+        },
+        {
+          "expr": "twistlock_images_high_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_high_vulnerabilities",
+          "refId": "F"
+        },
+        {
+          "expr": "twistlock_images_critical_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_images_critical_vulnerabilities",
+          "refId": "H"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Images Vulnerabilities status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "id": 14,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_serverless_low_compliance",
+          "color": "#6DDD8E"
+        },
+        {
+          "alias": "twistlock_serverless_medium_compliance",
+          "color": "#40ABD9"
+        },
+        {
+          "alias": "twistlock_serverless_high_compliance",
+          "color": "#C594D0"
+        },
+        {
+          "alias": "twistlock_serverless_critical_compliance",
+          "color": "#E61090"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_serverless_low_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_iserverless_low_compliance",
+          "refId": "A"
+        },
+        {
+          "expr": "twistlock_serverless_medium_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_medium_compliance",
+          "refId": "C"
+        },
+        {
+          "expr": "twistlock_serverless_high_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_high_compliance",
+          "refId": "E"
+        },
+        {
+          "expr": "twistlock_serverless_critical_compliance{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_critical_compliance",
+          "refId": "G"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Serverless Compliance Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "DS-Prometheus",
+      "decimals": 0,
+      "fill": 1,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "id": 18,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "twistlock_serverless_low_vulnerabilities",
+          "color": "#8AF366"
+        },
+        {
+          "alias": "twistlock_serverless_medium_vulnerabilities",
+          "color": "#F6DD58"
+        },
+        {
+          "alias": "twistlock_serverless_high_vulnerabilities",
+          "color": "#FF713C"
+        },
+        {
+          "alias": "twistlock_serverless_critical_vulnerabilities",
+          "color": "#F52F1B"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "twistlock_serverless_low_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_low_vulnerabilities",
+          "refId": "B"
+        },
+        {
+          "expr": "twistlock_serverless_medium_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_medium_vulnerabilities",
+          "refId": "D"
+        },
+        {
+          "expr": "twistlock_serverless_high_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_high_vulnerabilities",
+          "refId": "F"
+        },
+        {
+          "expr": "twistlock_serverless_critical_vulnerabilities{instance=\"TWISTLOCK_CONSOLE_HOSTNAME:443\",job=\"twistlock\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "twistlock_serverless_critical_vulnerabilities",
+          "refId": "H"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Serverless Vulnerabilities Status",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "schemaVersion": 16,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "Twistlock defender",
+  "uid": "acpr-twistlock-dashboard",
+  "version": 44
+}

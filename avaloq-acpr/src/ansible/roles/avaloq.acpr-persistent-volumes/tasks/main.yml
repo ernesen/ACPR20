@@ -1,0 +1,42 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Make sure {{ pv_def_directory }} exists
+  file:
+    path: "{{ pv_def_directory }}"
+    mode: 0700
+    state: directory
+
+- include_tasks: pv_define.yml
+  with_items: "{{ acpr_pv_definitions }}"
+
+- block:
+    - name: Log in to OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: login
+
+    - include_tasks: pv_create.yml
+      with_items: "{{ acpr_pv_definitions }}"
+
+  always:
+    - name: Log out from OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout
+
+- name: Remove {{ pv_def_directory | dirname }}
+  file:
+    path: "{{ pv_def_directory | dirname }}"
+    state: absent

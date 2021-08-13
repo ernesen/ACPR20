@@ -1,0 +1,616 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+# Notes:
+#  * Sensitive or encoded values have been omitted (replaced with '<removed>' placeholder)
+#  * Following values install a minimal initial cluster
+#  * For additional configurable parameters refer to the ACPR documentation
+#  * Refer to the ACPR documentation (https://docs.avaloq.com/acpr) for more information
+#    and additional configurable parameters
+
+
+#########################################################################################
+#################################### Infrastructure #####################################
+#########################################################################################
+
+##########################
+#### RPM repositories ####
+##########################
+# Note: Avaloq RPM repositories must be cached for a productive environment
+#   and require authentication. RPM repositories are used by the Administration host.
+#   See 'Technical requirements - Avaloq infrastructure' documentation topic.
+cust_acpr_rpm_repositories_username: <removed>
+cust_acpr_rpm_repositories_password: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  <removed>
+cust_acpr_rpm_repositories:
+  AcprOpenShift311:
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-ose-3.11
+  AcprRhel7Server:
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server
+  AcprRhel7ServerExtras:
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-extras
+  AcprRhel7Ansible29:
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-ansible-2.9
+  AcprTools:
+    url: https://repository.service.avaloq.com/rpm/acpr-rhel-7-tools
+
+##################################
+#### Container image pre-pull ####
+##################################
+# Used by playbook 'acpr-950-prepull-and-sign-images.yml' to pre-pull, sign the images
+# and push them to the on-premises registry cache
+cust_prepull_container_registry:
+  OpenShiftImages:
+    image_list: /path/to/images/file
+    private_key: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    sign_by: youremail@example.com
+    private_key_passphrase: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    source_registry_username: <removed>
+    source_registry_password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    source_registry_url: <removed>
+    destination_push_registry_username: <removed>
+    destination_push_registry_password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    destination_push_registry_url: registry.example.net/local-repository
+    destination_registry_username: <removed>
+    destination_registry_password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    destination_registry_url: registry.example.net
+    sigstore_tls_verify: true
+    sigstore_username: <removed>
+    sigstore_password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    sigstore_url: https://registry.example.net/signatures
+
+
+#########################################################################################
+############################# ACPR OpenShift 4.x cluster ################################
+#########################################################################################
+
+cust_clus_net_cidr: 10.128.0.0/16
+cust_clus_subnet_length: 9
+cust_clus_portal_cidr: 172.30.0.0/16
+
+cust_os_cluster_name: oc.example.local
+cust_os_def_subdomain: apps.example.net
+cust_os_version: 4.6.38
+
+cust_redhat_disconnected: false
+cust_container_images_signature_verification: true
+cust_masterapi_enable_audit: true
+
+###############
+#### Proxy ####
+###############
+
+cust_http_proxy: http://proxy.example.local:8080
+cust_https_proxy: http://proxy.example.local:8080
+cust_no_proxy: localhost,127.0.0.1,.local,.example.local
+
+############################################
+#### OpenShift 4.x Installer and OC CLI ####
+############################################
+
+# Note: This parameter is optional in connected cluster installations
+# cust_openshift_installer_url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{cust_os_version}}/openshift-install-linux.tar.gz
+# cust_openshift_installer_manage: true
+
+# Note: This parameter is optional in connected cluster installations
+# cust_openshift_client_url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/{{cust_os_version}}/openshift-client-linux.tar.gz
+# cust_openshift_client_manage: true
+
+cust_serve_ignition_files: false
+cust_ssh_publickey: <removed>
+
+###########################
+#### NTP configuration ####
+###########################
+
+cust_ntp_servers:
+  - tick.example.net
+  - tock.example.net
+
+################################
+#### MachineConfig settings ####
+################################
+
+cust_machineconfig:
+  master:
+    skip_verify: false
+  worker:
+    skip_verify: true
+
+##########################
+#### Nodes and labels ####
+##########################
+
+cust_egress_node_label: 'acpr.avaloq.com/egress-node'
+
+cust_cluster_nodes:
+  - name: bootstrap.example.local
+    role: bootstrap
+  - name: master1.example.local
+    role: master
+  - name: master2.example.local
+    role: master
+  - name: master3.example.local
+    role: master
+  - name: worker1.example.local
+    role: worker
+    labels:
+      - acpr.avaloq.com/ingress-node
+      - acpr.avaloq.com/egress-node
+  - name: worker2.example.local
+    role: worker
+    labels:
+      - acpr.avaloq.com/ingress-node
+      - acpr.avaloq.com/egress-node
+  - name: workerN.example.local
+    role: worker
+    labels:
+      - example.local/example=true
+
+##############################
+#### Kubelet configuraion ####
+##############################
+
+# Optional memory and cpu reservation for kubelet
+#  # For more information see documentation at
+#  # https://docs.openshift.com/container-platform/4.6/nodes/nodes/nodes-nodes-resources-configuring.html#nodes-nodes-resources-configuring-setting_nodes-nodes-resources-configuring
+#cust_kubeletconfig:
+#  worker:
+#    cpu: 1000m
+#    memory: 2Gi
+#  master:
+#    cpu: 1000m
+#    memory: 2Gi
+
+####################
+#### Egress IPs ####
+####################
+
+# Custom egress IP set-up
+#cust_egress:
+#  - namespace: namespace1
+#    ip: 10.10.10.101
+#  - namespace: namespace2
+#    ip: 10.10.10.102
+#  - namespace: namespace3
+#    ip: 10.10.10.103
+#  - namespace: namespace4
+#    ip: 10.10.10.104
+
+#################
+#### Storage ####
+#################
+
+# Following NFS configuration is for have an initial out-of-the-box storage
+# Please refer to the documentation topic 'Architecture' - 'Cluster internals' - 'Storage'
+# for mor information about storage
+#cust_nfs_hosts:
+#  - { fqdn: nfserver.example.local }
+
+# Optional storage and persistent volume creation
+#cust_nfs_shares_directory_path: /srv/nfs
+#cust_storage:
+#  acpr_pv_definitions:
+#    - { pv_backend_type: nfs, pv_count: 5, pv_size: 5Gi , pv_access_mode: ReadWriteOnce }
+#    - { pv_backend_type: nfs, pv_count: 5, pv_size: 5Gi , pv_access_mode: ReadWriteMany }
+#    - { pv_backend_type: nfs, pv_count: 5, pv_size: 10Gi, pv_access_mode: ReadWriteOnce }
+#    - { pv_backend_type: nfs, pv_count: 5, pv_size: 10Gi, pv_access_mode: ReadWriteMany }
+
+# Storage classes (optional)
+#cust_sc_definitions:
+#  - sc_name: 'example-nfs'
+#    sc_volume_binding_mode: 'Immediate'
+#    sc_reclaim_policy: 'Delete'
+#    sc_provisioner: 'example.net/nfs-client'
+#    sc_isdefault: 'true'
+
+##############################
+#### Cluster certificates ####
+##############################
+
+#cust_cluster_certificates:
+#  # Certificates for api.os_cluster_name
+#  # For more information see documentation at
+#  # https://docs.openshift.com/container-platform/4.6/security/certificates/api-server.html
+#  api:
+#    certificate: |
+#      -----BEGIN CERTIFICATE-----
+#      <removed>
+#    key: !vault |
+#      $ANSIBLE_VAULT;1.1;AES256
+#      <removed>
+#  # Certificates for ingress
+#  # For more information see documentation at
+#  # https://docs.openshift.com/container-platform/4.6/security/certificates/replacing-default-ingress-certificate.html
+#  ingress:
+#    ca_certificate: |
+#      -----BEGIN CERTIFICATE-----
+#      <removed>
+#    certificate: |
+#      -----BEGIN CERTIFICATE-----
+#      <removed>
+#    key: !vault |
+#      $ANSIBLE_VAULT;1.1;AES256
+#      <removed>
+#  # Certificates for additional trust bundle (e.g. when using self-signed registry certificate)
+#  # For more information see documentation at
+#  # https://docs.openshift.com/container-platform/4.6/networking/configuring-a-custom-pki.html
+#  additionalTrustBundle:
+#    ca_certificate: |
+#      -----BEGIN CERTIFICATE-----
+#      <removed>
+#      -----BEGIN CERTIFICATE-----
+#      <removed>
+
+########################
+#### Authentication ####
+########################
+
+# Following configuration sets three providers: Active Directory (ldap), OpenID Connect and htpasswd
+cust_master_identity_providers:
+  - name: "ActiveDirectory"
+    kind: "LDAPPasswordIdentityProvider"
+    url: "ldaps://ldap.example.net:636/ou=Company,dc=example,dc=net?sAMAccountName?sub?(objectClass=user)"
+    login: "true"
+    challenge: "true"
+    attributes:
+      email:
+        - "mail"
+      id:
+        - "dn"
+      name:
+        - "cn"
+      preferredUsername:
+        - "sAMAccountName"
+    bindDN: "USERNAME"
+    bindPassword: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+#  - name: htpasswd_provider
+#    mappingMethod: claim
+#    type: HTPasswd
+#    htpasswd:
+#      fileData:
+#        name: htpass-secret
+
+# When using htpasswd as the identity provider, following variables can be set to
+# * point to the location of the htpasswd
+# * list the users to whom assign cluster admin privileges
+# cust_master_htpasswd_file: <see documentation>
+# cust_default_cluster_admins
+#   - user1
+#   - user2
+
+# Credentials (username/password or token) variable used to login for operational tasks.
+# If not set, kubeconfig file is used as default.
+# Note: This parameter is optional and can be set only *after* the OpenShift installation.
+#cust_cluster_credentials:
+#  - url: https://api.cluster.example.net:6443
+#    username: acpr-user
+#    password: !vault |
+#      $ANSIBLE_VAULT;1.1;AES256
+#    <removed>
+#    token: !vault |
+#      $ANSIBLE_VAULT;1.1;AES256
+#    <removed>
+#    type: cluster-admin-user
+#  # type: deployment-user
+#    insecureSkipTlsVerify: false
+#    certificateAuthorityPath: /path/to/ca/certificate
+#    certificateAuthority: |
+#      <removed>
+
+#####################################
+#### Container images registries ####
+#####################################
+# Notes:
+# * Container images registries must be cached for a productive environment
+# * Avaloq container image registry requires authentication.
+#   See 'Technical requirements - Avaloq infrastructure' documentation topic.
+
+# Note: if using image signatures, a corresponding entry with the same host value in
+#   variable 'cust_container_images_registries' must exist.
+#
+# Note: This parameter must not be set in connected cluster installations
+# cust_registry_location: registry.service.avaloq.com/openshift4
+
+# Notes:
+#  - 'cust_pull_secret' is a optional convenience parameter to store the pull secret string
+#    generated via the Red Hat OpenShift web console (https://cloud.redhat.com/openshift/)
+#    which contains references to the public Internet Red Hat registries
+#  - It is advised to leave this parameter empty and only rely on configuring
+#    'cust_container_images_registries' (offering more configuration options)
+#  - If both parameters 'cust_container_images_registries' and 'cust_pull_secret' are set,
+#    they are programmatically combined to configure the cluster registries
+#  - If you insist using this variable, an empty authentication is required even if the
+#    registry does not require authentication.
+cust_pull_secret: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  <removed>
+
+# List of registries to be configured in the cluster with detailed technical settings:
+cust_container_images_registries:
+  AvaloqContainerImagesRepository:
+    host: registry.service.avaloq.com
+    username: <removed>
+    password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    ca_certificate: |
+      -----BEGIN CERTIFICATE-----
+      MIIGwTCCBamgAwIBAgIIRhYjj1/sjEIwDQYJKoZIhvcNAQELBQAwgbQxCzAJBgNV
+      BAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQHEwpTY290dHNkYWxlMRow
+      GAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjEtMCsGA1UECxMkaHR0cDovL2NlcnRz
+      LmdvZGFkZHkuY29tL3JlcG9zaXRvcnkvMTMwMQYDVQQDEypHbyBEYWRkeSBTZWN1
+      cmUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwHhcNMTgxMDEwMTAxNjEwWhcN
+      MjAxMDEwMTAxNjEwWjBCMSEwHwYDVQQLExhEb21haW4gQ29udHJvbCBWYWxpZGF0
+      ZWQxHTAbBgNVBAMMFCouc2VydmljZS5hdmFsb3EuY29tMIIBIjANBgkqhkiG9w0B
+      AQEFAAOCAQ8AMIIBCgKCAQEAxDGRN05r0wHGxOiAPzjB/xiPuj2QfYKPYHOqX8z3
+      sPm7JUU9BI1QWTech8rI/xz4KM2j7XCN8w8o/I4A/YTY2LYsOdDfz4HLJZwM0mKw
+      eB/R5zc8MlJSv51odH9IrpR057AtxDfOOsvcm0V7rpqyqpwDaXcxa1G1SjCouvH0
+      4Hl3f96Nw96QVa1nwEzY1yWFPE7iBUaMX+FlwpXHypEkGzO+r/4QSSDrRMHJ4XIS
+      kBbFzIbISiAWPBn9bt9xum5Zvvoby3wDmdzxIzIFmI9ibFcREvxtjBgiTRGP8qkb
+      3bpnJG6K4GOvB8TxXbGJPdvWTn6bkffW09aYpPQ12e8VYwIDAQABo4IDRjCCA0Iw
+      DAYDVR0TAQH/BAIwADAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDgYD
+      VR0PAQH/BAQDAgWgMDcGA1UdHwQwMC4wLKAqoCiGJmh0dHA6Ly9jcmwuZ29kYWRk
+      eS5jb20vZ2RpZzJzMS04NzYuY3JsMF0GA1UdIARWMFQwSAYLYIZIAYb9bQEHFwEw
+      OTA3BggrBgEFBQcCARYraHR0cDovL2NlcnRpZmljYXRlcy5nb2RhZGR5LmNvbS9y
+      ZXBvc2l0b3J5LzAIBgZngQwBAgEwdgYIKwYBBQUHAQEEajBoMCQGCCsGAQUFBzAB
+      hhhodHRwOi8vb2NzcC5nb2RhZGR5LmNvbS8wQAYIKwYBBQUHMAKGNGh0dHA6Ly9j
+      ZXJ0aWZpY2F0ZXMuZ29kYWRkeS5jb20vcmVwb3NpdG9yeS9nZGlnMi5jcnQwHwYD
+      VR0jBBgwFoAUQMK9J47MNIMwojPX+2yz8LQsgM4wMwYDVR0RBCwwKoIUKi5zZXJ2
+      aWNlLmF2YWxvcS5jb22CEnNlcnZpY2UuYXZhbG9xLmNvbTAdBgNVHQ4EFgQUdIOT
+      9FRQ5F8jmoRpxH10y6uPtE0wggF8BgorBgEEAdZ5AgQCBIIBbASCAWgBZgB2AKS5
+      CZC0GFgUh7sTosxncAo8NZgE+RvfuON3zQ7IDdwQAAABZl16DqkAAAQDAEcwRQIh
+      ALPmGm16ljWRU21BssTruL530e/dyskZ9zj3VUUTI+uPAiBAd0wrbDS+u22b9zdA
+      HwCQg1jAo80COVCoVjUkNegDAAB1AO5Lvbd1zmC64UJpH6vhnmajD35fsHLYgwDE
+      e4l6qP3LAAABZl16EvUAAAQDAEYwRAIgU5n6FGlFWdw040Keu5I7Ng0htqFUQw2i
+      u7Gs6jpbpFgCICoTzPXqAioyNAvgDTGKMVkOVLht98q6BotBJYMQ8boAAHUAXqdz
+      +d9WwOe1Nkh90EngMnqRmgyEoRIShBh1loFxRVgAAAFmXXoT6AAABAMARjBEAiAL
+      FJqB1AkSN0pUzUMSmGAh0FYlCc7Ici02c8eQWT9egAIgclHxpGYx9LNoO+u1megx
+      DbXWSB/azqsYI3KqUGBR7PcwDQYJKoZIhvcNAQELBQADggEBAFHtO+Eu1l5xjJ/P
+      7iZ6d/Iethf0s/tMo/Ol4spiGMrNd78Ac6lFYg1ijGPyqfYqe1S55JuRslkyZvsh
+      S1HHAZnSI9b1LtXZZFSav0Nj9KsIIvwWOEDRTYCFqdeDJs9tSOy/s9pxYtJej2Ki
+      irpOgJGKM6cSd18w0xkBYpKWpuhxQ7WDyk/YL+gmEDLdj8woSlR03IBon4NP7vdL
+      8FBs9rppsFjnJZoMwiPBRssX01oTI+nDQ3cJEYymhDS4iThgUBYn85FsLYpuQ+fC
+      iVerbhtmWsyxL6vz7Dhimhe0f/mMlaxiGc+xermSaSpbYqcFsEQouXy6Tlp2s1EJ
+      Mij4rEA=
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIE0DCCA7igAwIBAgIBBzANBgkqhkiG9w0BAQsFADCBgzELMAkGA1UEBhMCVVMx
+      EDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoT
+      EUdvRGFkZHkuY29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRp
+      ZmljYXRlIEF1dGhvcml0eSAtIEcyMB4XDTExMDUwMzA3MDAwMFoXDTMxMDUwMzA3
+      MDAwMFowgbQxCzAJBgNVBAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQH
+      EwpTY290dHNkYWxlMRowGAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjEtMCsGA1UE
+      CxMkaHR0cDovL2NlcnRzLmdvZGFkZHkuY29tL3JlcG9zaXRvcnkvMTMwMQYDVQQD
+      EypHbyBEYWRkeSBTZWN1cmUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwggEi
+      MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC54MsQ1K92vdSTYuswZLiBCGzD
+      BNliF44v/z5lz4/OYuY8UhzaFkVLVat4a2ODYpDOD2lsmcgaFItMzEUz6ojcnqOv
+      K/6AYZ15V8TPLvQ/MDxdR/yaFrzDN5ZBUY4RS1T4KL7QjL7wMDge87Am+GZHY23e
+      cSZHjzhHU9FGHbTj3ADqRay9vHHZqm8A29vNMDp5T19MR/gd71vCxJ1gO7GyQ5HY
+      pDNO6rPWJ0+tJYqlxvTV0KaudAVkV4i1RFXULSo6Pvi4vekyCgKUZMQWOlDxSq7n
+      eTOvDCAHf+jfBDnCaQJsY1L6d8EbyHSHyLmTGFBUNUtpTrw700kuH9zB0lL7AgMB
+      AAGjggEaMIIBFjAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNV
+      HQ4EFgQUQMK9J47MNIMwojPX+2yz8LQsgM4wHwYDVR0jBBgwFoAUOpqFBxBnKLbv
+      9r0FQW4gwZTaD94wNAYIKwYBBQUHAQEEKDAmMCQGCCsGAQUFBzABhhhodHRwOi8v
+      b2NzcC5nb2RhZGR5LmNvbS8wNQYDVR0fBC4wLDAqoCigJoYkaHR0cDovL2NybC5n
+      b2RhZGR5LmNvbS9nZHJvb3QtZzIuY3JsMEYGA1UdIAQ/MD0wOwYEVR0gADAzMDEG
+      CCsGAQUFBwIBFiVodHRwczovL2NlcnRzLmdvZGFkZHkuY29tL3JlcG9zaXRvcnkv
+      MA0GCSqGSIb3DQEBCwUAA4IBAQAIfmyTEMg4uJapkEv/oV9PBO9sPpyIBslQj6Zz
+      91cxG7685C/b+LrTW+C05+Z5Yg4MotdqY3MxtfWoSKQ7CC2iXZDXtHwlTxFWMMS2
+      RJ17LJ3lXubvDGGqv+QqG+6EnriDfcFDzkSnE3ANkR/0yBOtg2DZ2HKocyQetawi
+      DsoXiWJYRBuriSUBAA/NxBti21G00w9RKpv0vHP8ds42pM3Z2Czqrpv1KrKQ0U11
+      GIo/ikGQI31bS/6kA1ibRrLDYGCD+H1QQc7CoZDDu+8CL9IVVO5EFdkKrqeKM+2x
+      LXY2JtwE65/3YR8V3Idv7kaWKK2hJn0KCacuBKONvPi8BDAB
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIEfTCCA2WgAwIBAgIDG+cVMA0GCSqGSIb3DQEBCwUAMGMxCzAJBgNVBAYTAlVT
+      MSEwHwYDVQQKExhUaGUgR28gRGFkZHkgR3JvdXAsIEluYy4xMTAvBgNVBAsTKEdv
+      IERhZGR5IENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTQwMTAx
+      MDcwMDAwWhcNMzEwNTMwMDcwMDAwWjCBgzELMAkGA1UEBhMCVVMxEDAOBgNVBAgT
+      B0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoTEUdvRGFkZHku
+      Y29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRpZmljYXRlIEF1
+      dGhvcml0eSAtIEcyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv3Fi
+      CPH6WTT3G8kYo/eASVjpIoMTpsUgQwE7hPHmhUmfJ+r2hBtOoLTbcJjHMgGxBT4H
+      Tu70+k8vWTAi56sZVmvigAf88xZ1gDlRe+X5NbZ0TqmNghPktj+pA4P6or6KFWp/
+      3gvDthkUBcrqw6gElDtGfDIN8wBmIsiNaW02jBEYt9OyHGC0OPoCjM7T3UYH3go+
+      6118yHz7sCtTpJJiaVElBWEaRIGMLKlDliPfrDqBmg4pxRyp6V0etp6eMAo5zvGI
+      gPtLXcwy7IViQyU0AlYnAZG0O3AqP26x6JyIAX2f1PnbU21gnb8s51iruF9G/M7E
+      GwM8CetJMVxpRrPgRwIDAQABo4IBFzCCARMwDwYDVR0TAQH/BAUwAwEB/zAOBgNV
+      HQ8BAf8EBAMCAQYwHQYDVR0OBBYEFDqahQcQZyi27/a9BUFuIMGU2g/eMB8GA1Ud
+      IwQYMBaAFNLEsNKR1EwRcbNhyz2h/t2oatTjMDQGCCsGAQUFBwEBBCgwJjAkBggr
+      BgEFBQcwAYYYaHR0cDovL29jc3AuZ29kYWRkeS5jb20vMDIGA1UdHwQrMCkwJ6Al
+      oCOGIWh0dHA6Ly9jcmwuZ29kYWRkeS5jb20vZ2Ryb290LmNybDBGBgNVHSAEPzA9
+      MDsGBFUdIAAwMzAxBggrBgEFBQcCARYlaHR0cHM6Ly9jZXJ0cy5nb2RhZGR5LmNv
+      bS9yZXBvc2l0b3J5LzANBgkqhkiG9w0BAQsFAAOCAQEAWQtTvZKGEacke+1bMc8d
+      H2xwxbhuvk679r6XUOEwf7ooXGKUwuN+M/f7QnaF25UcjCJYdQkMiGVnOQoWCcWg
+      OJekxSOTP7QYpgEGRJHjp2kntFolfzq3Ms3dhP8qOCkzpN1nsoX+oYggHFCJyNwq
+      9kIDN0zmiN/VryTyscPfzLXs4Jlet0lUIDyUGAzHHFIYSaRt4bNYC8nY7NmuHDKO
+      KHAN4v6mF56ED71XcLNa6R+ghlO773z/aQvgSMO3kwvIClTErF0UZzdsyqUvMQg3
+      qm5vjLyb4lddJIGvl5echK1srDdMZvNhkREg5L4wn3qkKQmw4TRfZHcYQFHfjDCm
+      rw==
+      -----END CERTIFICATE-----
+    trust_type: signedBy
+    sigstore_type: web
+    sigstore: https://registry.service.avaloq.com/signatures
+    pubkeys:
+      - |
+        -----BEGIN PGP PUBLIC KEY BLOCK-----
+        Version: GnuPG v2.0.22 (GNU/Linux)
+
+        mQENBF1bpO0BCACowmv+pUdNY+4fctf9YqS1zCVvUu7cWbar5HbURDhS6N1guQ5v
+        Ed1720o1nn/ZDg+xgnBd5Z+RqfOaFjr4BOJLZ0yUn+a82zQL3wA3RLUswcsxTMWQ
+        QBwlVqrCZwWjLmmH1DrvdGYT75VqTN5MkEJ5JMbgq6u9UsmueF5stkUfIYfLWQbv
+        kEJzSmBtN/KUciVWCTgXnLhM6eHitdyr2PHKjSLod2pAy3AA28GHAwiQTNx2NfUi
+        8JkaAqn9mOS7P76mtDcvXkZ16VWwzt+6gB3cz4+/LSXC1GHLTo78Cv3phGPFld1o
+        Mg81hHV7TkGFcivvf8j67ref/JFddrIo0tvTABEBAAG0YyJBdmFsb3EgRXZvbHV0
+        aW9uIEFHIC0gU2lnbmluZyAtIDAwMSIgKCJBdmFsb3EgaW1hZ2Ugc2lnbmluZyBr
+        ZXkiKSA8Iml0LWluZnJhc3RydWN0dXJlQGF2YWxvcS5jb20iPokBPQQTAQgAJwUC
+        XVuk7QIbAwUJBaOagAULCQgHAwUVCgkICwUWAgMBAAIeAQIXgAAKCRDZKO/0lnpG
+        tqVhB/91LapK5bAXj+paW35/plMCwMdueJx+5iJnxE5VuZjmLDIN1ki3meHtAq2f
+        ySB5450zTly0cYYZ3wVWeRkZn6n+cPMCDwOHqvCEjdxe0yZIPB2lcoDBMiajTz98
+        YyMrRzFetBIaO+/K++vI9U9AuaIEhog9EmQ6gq5xgVid5y7OP83/CqDTJFgLxRTD
+        33er2zlFaLkf5NIzkzR7uHl+msglQCxThQWOl4Y4XZWo03ZTAKfhDb1cTahODAM6
+        Gks5lg1fOxUNytiIo4jyZTw0K+U9/DLhx6bjSgEZxK4nofIg2PueNdOvpsoEUy5s
+        XfedXQBykfYlbOtN+LhhBzfwjHwXuQENBF1bpO0BCACX5g8lOK0zCE0eZlQnyrKP
+        Sz60MKuc8wgBRLX8v/QhEwz1IpLN5+Cofa53nNQ59yODxna6ai8YTam/jGde/dSz
+        Q/V8e0YH5Hw3w1qtNRUTTl6ULfJjJYYiCJoS+lYDa35vSofK4v0LwnY+npwo8bSR
+        w9wmxjjRu9UgsjWivd8ZgFTwVz5ruNUg8atrNrKiXZlWu+YRU2uvI6oHpN5TZ8z4
+        KOQSnOdzfL64xb9pJlNPEFPleceolh4V89UYibRntnbqSp1VEqf/r5wQnDQR1ROf
+        tHtfYs4rMar9vJx7t9b6NAUtSa+RMJrZQq9ad+NuRDogLYANelLM3NKEc3hlMkc9
+        ABEBAAGJASUEGAEIAA8FAl1bpO0CGwwFCQWjmoAACgkQ2Sjv9JZ6Rray/wf9Gg7o
+        HlefiBlHgDtyQ6aauilTaYUE5F77QV9YyNoszMd14GjJtAiJyayv7jNYiRjqE/jm
+        WLunRF6XURgR4wv2ADfstl3dL23VTMzdbQ2bRvp20IzcY1Lp0GzhC4SU/Vj6IqAD
+        2Gob7OIH3K1BqhnEaIwrZ2FbKXTs0oxtSpmh5OMc5J3SUAA98kPNmIpYXmZCk/JW
+        To3i9a158LLy1EjD6btKyoNLGLLfyCUNqptW+J5VtcGLIZypuiL2fPCw09c8oBTv
+        FXrxUWvzTWaJuH6fRtZHuAuzF1FkYSdtA+0r5omoBqAntGvq/fP4PYWLWwZxs3MP
+        f8x87l6/syNp9wgAsA==
+        =dzhG
+        -----END PGP PUBLIC KEY BLOCK-----
+  RedHatCom:
+    host: registry.access.redhat.com
+    trust_type: signedBy
+    keypath: /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+    sigstore_type: web
+    sigstore: https://access.redhat.com/webassets/docker/content/sigstore
+  RedHatIO:
+    host: registry.redhat.io
+    trust_type: signedBy
+    keypath: /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+    sigstore_type: web
+    sigstore: https://registry.redhat.io/containers/sigstore
+
+
+# Note: Example to specify the location of an image if it is being mirrored in a
+# different repository than the original one.
+# Note bene: Following commented code is an entry example: ACPR does not require the
+# 'ose-local-storage-operator' operator
+# cust_container_images_mirrors:
+#   ose-local-storage-operator:
+#     source: registry.redhat.io/openshift4/ose-local-storage-operator
+#     mirrors:
+#       - registry.service.avaloq.com/openshift4/ose-local-storage-operator
+
+# Note: Ensure the parameter 'cust_container_images_registries' has corresponding
+# registry configuration entries for the referenced registries in parameter
+# 'cust_operatorhub_catalogsources'
+
+# Note: This parameter is not required in connected cluster installations
+# Note: Custom catalogue sources (e.g. one holding your company internal operators) can
+# be added to this parameter as well
+# cust_operatorhub_catalogsources:
+#   acpr-redhat-operators:
+#     displayname: Red Hat Operators
+#     image: registry.service.avaloq.com/redhat/redhat-operator-index:v4.6
+#   acpr-certified-operators:
+#     displayname: Red Hat Certified Operators
+#     image: registry.service.avaloq.com/redhat/certified-operator-index:v4.6
+#   acpr-redhat-marketplace:
+#     displayname: Red Hat Marketplace
+#     image: registry.service.avaloq.com/redhat/redhat-marketplace-index:v4.6
+
+#############################################
+########### OperatorHub Operators ###########
+#############################################
+
+# ACPR currently *does not* require any operators from Red Hat OperatorHub
+#cust_operatorhub_operators:
+
+##########################
+#### Project template ####
+##########################
+
+#cust_projecttemplate:
+#  labels:
+#    example.net/quota-size: xs
+#  rolebinding:
+#    - apiVersion: v1
+#      groupNames:
+#        - system:authenticated
+#      kind: RoleBinding
+#      metadata:
+#        name: view
+#        namespace: ${PROJECT_NAME}
+#      roleRef:
+#        name: view
+#      subjects:
+#        - kind: SystemGroup
+#          name: system:authenticated
+
+# Define whether any authenticated user can create new namespaces (aka projects)
+cust_self_provisioners: false
+
+#############################################
+########### Console Customization ###########
+#############################################
+
+# cust_console_links:
+#   ApplicationMenu:
+#     - text: Git
+#       url: 'https://git.example.net/repos/avaloq-acpr'
+#       imageurl: 'https://git.example.net/favicon.ico'
+#       section: 'Codebase'
+#     - text: Company Monitoring
+#       url: 'https://monitoring.example.net'
+
+# cust_console_motd: 'Welcome to ACPR OpenShift cluster'
+
+# cust_console_notifications:
+#   BannerTop:
+#     - name: top1
+#       text: Upcoming Maintenance window for this cluster see
+#       color: '#0088CE'
+#       bgcolor: '#FFF'
+#       url: https://example.net/maintenance-schedule
+#       urltext: Calendar
+#   BannerBottom:
+#     - name: bottom1
+#       text: Test notification at the bottom
+#   BannerTopBottom:
+#     - name: topbottom1
+#       text: Test notification at the top and bottom
+
+####################################################
+#### Avaloq Operators (non-Installator pattern) ####
+####################################################
+
+# Avaloq Database Operator configuration
+cust_acpr_database_operator_credentials:
+  db-operator-admin: # Secret and user name may be changed
+    username: dbop_adm
+    password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+
+cust_acpr_database_operator_logaccess_groupname: 'system:authenticated'
+
+# Avaloq Database Operator user-defined Oracle templates (optional)
+# Hereafter are two examples of user-defined Oracle templates for the Avaloq Database Operator:
+#cust_acpr_database_operator_oracle_templates:
+#  createTablespace.template: create bigfile tablespace $tablespace.name size 50m autoextend on next 10m maxsize unlimited
+#  dropTablespace.template: drop tablespace $tablespace.name including contents and datafiles

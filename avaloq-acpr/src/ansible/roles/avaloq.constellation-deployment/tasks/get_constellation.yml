@@ -1,0 +1,103 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Download constellation (http/git)
+  git:
+    repo: "{%if acd_const_loc_user is defined %}{{ acd_const_loc | regex_replace('://', '://' + acd_const_loc_user | urlencode + ':' + acd_const_loc_pass | urlencode + '@') }}{% else %}{{ acd_const_loc }}{%endif%}"
+    dest: "{{ wdir }}"
+    version: "{{ acd_const_git_branch | default('master') }}"
+  when:
+    - acd_const_loc is defined
+    - acd_const_loc is not none
+    - acd_const_loc | length > 0
+    - acd_const_loc | urlsplit('scheme') | regex_search("^http?", ignorecase=True)
+    - acd_const_loc | urlsplit('path') | regex_search("\.git$", ignorecase=True)
+    - acd_const_loc_folder is undefined
+
+- name: Download constellation (http/archive)
+  unarchive:
+    src: "{%if acd_const_loc_user is defined %}{{ acd_const_loc | regex_replace('://', '://' + acd_const_loc_user | urlencode + ':' + acd_const_loc_pass | urlencode + '@') }}{% else %}{{ acd_const_loc }}{%endif%}"
+    dest: "{{ wdir }}"
+    remote_src: yes
+  when:
+    - acd_const_loc is defined
+    - acd_const_loc is not none
+    - acd_const_loc | length > 0
+    - acd_const_loc | urlsplit('scheme') | regex_search("^http?", ignorecase=True)
+    - acd_const_loc | urlsplit('path') | regex_search("\.zip$|\.tar\.gz$|\.tgz$", ignorecase=True)
+
+- name: Check acd_onst_loc file or folder
+  stat:
+    path: "{{ acd_const_loc }}"
+  register: const_loc_path
+  when:
+    - not acd_const_loc | urlsplit('scheme') | length > 0
+
+- name: Download constellation (local/archive)
+  unarchive:
+    src: "{{ acd_const_loc }}"
+    dest: "{{ wdir }}"
+  when:
+    - not acd_const_loc | urlsplit('scheme') | length > 0
+    - const_loc_path.stat.exists
+    - acd_const_loc | urlsplit('path') | regex_search("\.zip$|\.tar\.gz$|\.tgz$", ignorecase=True)
+
+- name:  Download constellation (local/folder)
+  synchronize:
+    src: "{{ acd_const_loc }}/"
+    dest: "{{ wdir }}"
+  delegate_to: "{{ inventory_hostname }}"
+  when:
+    - not acd_const_loc | urlsplit('scheme') | length > 0
+    - const_loc_path.stat.isdir is defined and const_loc_path.stat.isdir
+
+- name: Create config set directory
+  file:
+    path: "{{ wdir }}/config-sets/{{ acd_cfset | default('') }}"
+    state: directory
+
+- name: Download config set (http/archive)
+  unarchive:
+    src: "{%if acd_cfset_loc_user is defined %}{{ acd_cfset_loc | regex_replace('://', '://' + acd_cfset_loc_user | urlencode + ':' + acd_cfset_loc_pass | urlencode + '@') }}{% else %}{{ acd_cfset_loc }}{%endif%}"
+    dest: "{{ wdir }}/config-sets/{{ acd_cfset }}"
+    remote_src: yes
+  when:
+    - acd_cfset_loc is defined
+    - acd_cfset_loc is not none
+    - acd_cfset_loc | length > 0
+    - acd_cfset_loc | urlsplit('scheme') | regex_search("^http?", ignorecase=True)
+    - acd_cfset_loc | urlsplit('path') | regex_search("\.zip$|\.tar\.gz$|\.tgz$", ignorecase=True)
+
+- name: Download config set (http/git)
+  git:
+    repo: "{%if acd_cfset_loc_user is defined %}{{ acd_cfset_loc | regex_replace('://', '://' + acd_cfset_loc_user | urlencode + ':' + acd_cfset_loc_pass | urlencode + '@') }}{% else %}{{ acd_cfset_loc }}{%endif%}"
+    dest: "{{ wdir }}/config-sets/{{ acd_cfset }}"
+    version: "{{ acd_cfset_git_branch | default('master') }}"
+  when:
+    - acd_cfset_loc is defined
+    - acd_cfset_loc is not none
+    - acd_cfset_loc | length > 0
+    - acd_cfset_loc | urlsplit('scheme') | regex_search("^http?", ignorecase=True)
+    - acd_cfset_loc | urlsplit('path') | regex_search("\.git$", ignorecase=True)
+
+- name: Download config set (local/archive)
+  unarchive:
+    src: "{{ acd_cfset_loc }}"
+    dest: "{{ wdir }}"
+  when:
+    - acd_cfset_loc is defined
+    - acd_cfset_loc is not none
+    - acd_cfset_loc | length > 0
+    - acd_cfset_loc | urlsplit('scheme') | length > 0
+    - acd_cfset_loc | urlsplit('path') | regex_search("\.zip$|\.tar\.gz$|\.tgz$", ignorecase=True)

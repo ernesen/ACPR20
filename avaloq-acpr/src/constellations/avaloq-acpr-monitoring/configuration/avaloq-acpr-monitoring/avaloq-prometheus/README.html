@@ -1,0 +1,411 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_VERSION</td>
+<td>OpenShift version where this constellation is deployed to. Valid values are 3 or 4.</td>
+<td>true</td>
+<td>4</td>
+</tr>
+<tr>
+<td>OPENSHIFT_NAMESPACE</td>
+<td>The namespace used on Openshift where this constellation is deployed to.</td>
+<td>true</td>
+<td>acpr-monitoring</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_DEPLOY_SECRET</td>
+<td>Set to 'false' if you don't want to deploy secrets. It can be useful when using Sealed Secrets</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_DEPLOY_PVC</td>
+<td>Set to 'false' if you don't want to deploy PVCs</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_ALERTS</td>
+<td>Enables or disable deploy of Prometheus alerts</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_SESSION_SECRET</td>
+<td>Secret string used to encrypt sessions</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry containing the Red Hat images. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_ROUTE</td>
+<td>Route to Prometheus in 'openshift-monitorng' namespace</td>
+<td>false</td>
+<td>acpr-monitoring</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_PASSWORD</td>
+<td>Password of user used to login to Prometheus in 'openshift-monitorng' namespace</td>
+<td>false</td>
+<td>acpr-monitoring</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_USERNAME</td>
+<td>Username of user used to login to Prometheus in 'openshift-monitorng' namespace</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_CONTAINER_IMAGE_PULL_POLICY</td>
+<td>The pull policy to use for the container image. Valid values are <code>IfNotPresent</code> and <code>Always</code>, default is <code>IfNotPresent</code>.</td>
+<td>false</td>
+<td>IfNotPresent</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_CLUSTER_NAME</td>
+<td>This variable is used if multiple Prometheus instances are federated</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_ETCD_NODES</td>
+<td>List of all etcd nodes within the cluster</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_ROUTE_HOSTNAME</td>
+<td>Select a hostname to use to access Prometheus. If empty, OpenShift generates the hostname automatically</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_SHOW_HTPASSWD_FORM</td>
+<td>Show or hide htpasswd form in Promethues oAuth proxy</td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_REPLICAS</td>
+<td>Number of replicas of Prometheus</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_CONTAINER_IMAGE</td>
+<td></td>
+<td>false</td>
+<td>openshift3/prometheus:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PROXY_CONTAINER_IMAGE</td>
+<td></td>
+<td>false</td>
+<td>openshift3/oauth-proxy:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PODANTIAFFINITY_TOPOLOGY_KEY</td>
+<td>Prometheus pod antiaffinity topology key</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_DATABASE_RETENTION_TIME</td>
+<td>The length of time Prometheus will keep individual metrics</td>
+<td>false</td>
+<td>14d</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_SELECTOR_KEY</td>
+<td></td>
+<td>false</td>
+<td>dummySelector</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_SELECTOR_VALUE</td>
+<td></td>
+<td>false</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_VOLUME_HOSTPATH_DATA</td>
+<td>Prometheus hostpath for data</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PVC_STORAGE_REQUEST_DATA</td>
+<td>Prometheus storage request for storing its database</td>
+<td>false</td>
+<td>1Gi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PVC_STORAGE_CLASSNAME_DATA</td>
+<td>Prometheus PersitentVolumeClaim data storage class name</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PVC_STORAGE_ACCESSMODE_DATA</td>
+<td>Prometheus PersitentVolumeClaim data storage access mode</td>
+<td>false</td>
+<td>ReadWriteOnce</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_SECURITYCONTEXT_PRIVILEGED</td>
+<td></td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_SECURITYCONTEXT_RUNASUSER</td>
+<td>Prometheus prviledged user id</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RESOURCES_LIMIT_CPU</td>
+<td>Prometheus CPU limit</td>
+<td>false</td>
+<td>2000m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RESOURCES_REQUEST_CPU</td>
+<td>Prometheus CPU request</td>
+<td>false</td>
+<td>500m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RESOURCES_LIMIT_MEMORY</td>
+<td>Prometheus memory limit</td>
+<td>false</td>
+<td>2048Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RESOURCES_REQUEST_MEMORY</td>
+<td>Prometheus memory request</td>
+<td>false</td>
+<td>2048Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_CPU</td>
+<td>Prometheus Node exporter CPU limit</td>
+<td>false</td>
+<td>50m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_CPU</td>
+<td>Prometheus Node exporter CPU request</td>
+<td>false</td>
+<td>10m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_MEMORY</td>
+<td>Prometheus Node exporter memory limit</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_MEMORY</td>
+<td>Prometheus Node exporter memory request</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_EXPORTER_CONTAINER_IMAGE</td>
+<td>Container image of Prometheus Node exporter</td>
+<td>false</td>
+<td>openshift3/prometheus-node-exporter:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_EXPORTER_PORT</td>
+<td></td>
+<td>false</td>
+<td>9100</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_REQUEST_CPU</td>
+<td></td>
+<td>false</td>
+<td>100m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_LIMIT_MEMORY</td>
+<td></td>
+<td>false</td>
+<td>64Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_REQUEST_MEMORY</td>
+<td></td>
+<td>false</td>
+<td>32Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_LIMIT_CPU</td>
+<td></td>
+<td>false</td>
+<td>200m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_CONTAINER_IMAGE</td>
+<td>Container image of Prometheus Rule Provisioner</td>
+<td>false</td>
+<td>avaloq/avaloq-prometheus-rule-provisioner:0.2.4</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_USERNAME</td>
+<td>Username used by Prometheus Rule Provisioner to access Prometheus</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_PASSWORD</td>
+<td>Password used by Prometheus Rule Provisioner to access Prometheus</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_CERT_PATH</td>
+<td>Path to certificate used by Prometheus Rule Provisioner to serve encrypted connections</td>
+<td>false</td>
+<td>/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_REPLICAS</td>
+<td>Number of replicas of Prometheus Rule Provisioner</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_NODE_SELECTOR_VALUE</td>
+<td>Specify a node where Prometheus Rule Provisioner is deployed</td>
+<td>false</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_SECURITYCONTEXT_PRIVILEGED</td>
+<td>Run Prometheus Rule Provisioner as privileged pods</td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_SECURITYCONTEXT_RUNASUSER</td>
+<td>Prometheus Rule Provisioner security context run as user</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_CPU</td>
+<td>Prometheus Rule Provisioner CPU request</td>
+<td>false</td>
+<td>25m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_MEMORY</td>
+<td>Prometheus Rule Provisioner memory limit</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_MEMORY</td>
+<td>Prometheus Rule Provisioner memory request</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_CPU</td>
+<td>Prometheus Rule Provisioner CPU limit</td>
+<td>false</td>
+<td>200m</td>
+</tr>
+<tr>
+<td>AVALOQ_PROMETHEUS_RULE_PROVISIONER_LOGGING_LEVELS</td>
+<td>Comma-separated list of custom logging levels per logger. Logger names must be written in snake_case, logging levels as defined by log4j2. Example: &quot;LOGGING_LEVEL=WARN,ORG_THIRDPARTY=ERROR&quot;</td>
+<td>false</td>
+<td>LOGGING_LEVEL=info</td>
+</tr>
+</tbody>
+</table>
+<h1>AvaloqFiles</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prometheus-configuration/prometheus-configuration.yml</td>
+<td></td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>prometheus-configuration/prometheus-configuration-ocp4.yml</td>
+<td></td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>prometheus-configuration/htpasswd</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/avaloq-prometheus/prometheus-configuration/htpasswd">htpasswd</a></td>
+</tr>
+<tr>
+<td>etcd-certificates/etcd-ca-certificate</td>
+<td></td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>etcd-certificates/etcd-certificate</td>
+<td></td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>etcd-certificates/etcd-key</td>
+<td></td>
+<td>false</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> The default values for AvaloqFiles (if any) are present after running the <code>fetch</code> command.</p>

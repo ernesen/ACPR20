@@ -1,0 +1,188 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- block:
+    - name: acpr login
+      import_role:
+        name: avaloq.acpr-ocp4-auth
+        tasks_from: login.yml
+      tags:
+        - always
+
+    - block:
+        - name: Pause the autoreboot of MachineConfigPool
+          import_tasks: pause_machineconfig.yml
+          tags:
+            - always
+          vars:
+            pause_machineconfigpool: true
+
+        - name: Manage release checksums
+          import_tasks: release_checksum.yml
+          when:
+            - acpr_redhat_disconnected|bool
+          tags:
+            - release_checksum
+
+        - name: Configure containers registries
+          import_tasks: container_registry.yml
+          when: >
+            (acpr_container_images_registries is defined)
+          tags:
+            - container_registry
+
+        - name: Configure images signatures
+          import_tasks: image_signature.yml
+          when: >
+            (acpr_container_images_registries is defined)
+          tags:
+            - image_signature
+
+        - name: Configure Kubelet
+          import_tasks: kubelet_config.yml
+          when: >
+            (acpr_kubeletconfig is defined)
+          tags:
+            - kubelet_config
+
+        - name: Configure OperatorHub
+          import_tasks: operatorhub.yml
+          tags:
+            - operatorhub
+
+        - name: Configure identity provider
+          import_tasks: identity_provider.yml
+          when: >
+            (acpr_master_identity_providers is defined)
+          tags:
+            - identity_provider
+
+        - name: Configure openshift-imageregistry
+          import_tasks: imageregistry.yml
+          tags:
+            - imageregistry
+
+        - name: Configure IngressController
+          import_tasks: ingress_controller.yml
+          when: >
+            (acpr_cluster_nodes | default() | select("search", "acpr.avaloq.com/ingress-node") | list | length  > 0)
+          tags:
+            - ingress_controller
+
+        - name: Configure cluster admins
+          import_tasks: cluster_admins.yml
+          when: >
+            (acpr_default_cluster_admins is defined)
+          tags:
+            - cluster_admin
+
+        - name: Configure NTP
+          import_tasks: ntp_configuration.yml
+          when: >
+            (acpr_ntp_servers is defined)
+          tags:
+            - ntp_configuration
+
+        - name: Configure OpenShift logging
+          import_tasks: openshift_logging.yml
+          tags:
+            - openshift_logging
+
+        - name: Define namespace's template
+          import_tasks: project_template.yml
+          when: >
+            (acpr_projecttemplate is defined)
+          tags:
+            - project_template
+
+        - name: Project self-provisioning
+          import_tasks: self_provisioners.yml
+          tags:
+            - self-provisioners
+
+        - name: Encrypt etcd database
+          import_tasks: etcd_encryption.yml
+          tags:
+            - etcd_encryption
+
+        - name: Set cluster certificates
+          import_tasks: cluster_certificate.yml
+          when: >
+            (acpr_cluster_certificates is defined)
+          tags:
+            - cluster_certificate
+
+        - name: Label namespace(s)
+          import_tasks: label_namespace.yml
+          tags:
+            - label_namespace
+
+        - name: Label nodes
+          import_tasks: label_nodes.yml
+          tags:
+            - label_nodes
+
+        - name: Import support image
+          import_tasks: import_support_image.yml
+          tags:
+            - import_support_image
+            - redhat_disconnected
+          when:
+            - acpr_redhat_disconnected|bool
+
+        - name: Remove operator
+          import_tasks: remove_operator.yml
+          tags:
+            - redhat_disconnected
+          when:
+            - acpr_redhat_disconnected|bool
+
+        - name: Custom configuration
+          import_tasks: custom_configuration.yml
+          tags:
+            - custom_configuration
+
+        - name: Console Customization
+          import_tasks: console_customization.yml
+          tags:
+            - console_customization
+
+        - name: Unpause the autoreboot of MachineConfigPool
+          import_tasks: pause_machineconfig.yml
+          tags:
+            - always
+          vars:
+            pause_machineconfigpool: false
+
+        - name: Disable the autoreboot of MCO on SNO
+          import_tasks: pause_machineconfig.yml
+          tags:
+            - always
+          vars:
+            pause_machineconfigpool: true
+          when:
+            - avq_is_sno is defined
+            - avq_is_sno|bool
+
+  module_defaults:
+    group/k8s:
+      host: "{{ acpr_cluster_credentials[0]['url'] | default('https://api.{{ os_cluster_name }}:6443') }}"
+      ca_cert: "{{ acpr_cluster_credentials[0]['certificateAuthorityPath'] | default(ca_certificate.path) | default('') }}"
+      validate_certs: "{{ 'no' if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default('no' if acpr_cluster_credentials is undefined) | default(False) else 'yes' }}"
+
+  always:
+    - name: acpr logout
+      import_role:
+        name: avaloq.acpr-ocp4-auth
+        tasks_from: logout.yml

@@ -1,0 +1,60 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check if label is attached to any node
+  command: 'oc --match-server-version=true get nodes -l {{ item }}=true -o name'
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  check_mode: no
+  changed_when: false
+  register: node_output
+
+- name: store id
+  set_fact:
+    id: '{{ item[-1] }}'
+
+# If there isn't a node with that label we will label one
+- block:
+    - name: Label node
+      command: 'oc --match-server-version=true label {{ ose_infra_nodes.stdout_lines[id|int % ose_infra_nodes.stdout_lines|length ] }} {{ item }}=true'
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+
+    - name: Get node with attached label
+      command: 'oc --match-server-version=true get nodes -l {{ item }}=true -o name'
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: node_label_output
+
+    - name: overwrite node_output
+      set_fact:
+        node_output: '{{ node_label_output }}'
+  when:
+    - node_output.stdout_lines is defined
+    - node_output.stdout_lines|length == 0
+
+- name: create hostPath volume
+  file:
+    path: '{{ acpr_logging_hostpath_dir }}/{{ item }}'
+    state: directory
+    owner: 1000
+    group: 1000
+    mode: '4750'
+  become: true
+  delegate_to: '{{ node_output.stdout.split("/")[1] }}'
+  register: hostpath_volume
+
+- name: Enable elasticsearch redeployment
+  set_fact:
+    initialize_es_hostpath: true

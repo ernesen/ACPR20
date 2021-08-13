@@ -1,0 +1,6 @@
+[Unit]
+Description=Docker housekeeping
+
+[Service]
+Type=oneshot
+ExecStart={{ acpr_docker_cleanup_base }}/bin/dockercleanup.sh

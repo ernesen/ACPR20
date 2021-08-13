@@ -1,0 +1,91 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_VERSION</td>
+<td>OpenShift version where this constellation is deployed to. Valid values are 3 or 4.</td>
+<td>true</td>
+<td>4</td>
+</tr>
+<tr>
+<td>OPENSHIFT_NAMESPACE</td>
+<td>The namespace used on Openshift where this constellation is deployed to.</td>
+<td>true</td>
+<td>acpr-monitoring</td>
+</tr>
+<tr>
+<td>AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry containing the Red Hat images. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_CONTAINER_IMAGE_PULL_POLICY</td>
+<td>The pull policy to use for the container image. Valid values are <code>IfNotPresent</code> and <code>Always</code>, default is <code>IfNotPresent</code>.</td>
+<td>false</td>
+<td>IfNotPresent</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_CONTAINER_IMAGE</td>
+<td>Container image of kube-state-metrics</td>
+<td>false</td>
+<td>openshift3/ose-kube-state-metrics:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_REPLICAS</td>
+<td>Number of replicas of kube-state-metrics deployment</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_CPU</td>
+<td>kube-state-metrics memory request</td>
+<td>false</td>
+<td>1024m</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_MEMORY</td>
+<td>kube-state-metrics memory limit</td>
+<td>false</td>
+<td>2048Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_MEMORY</td>
+<td>kube-state-metrics memory request</td>
+<td>false</td>
+<td>2048Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_CPU</td>
+<td>kube-state-metrics CPU limit</td>
+<td>false</td>
+<td>1024m</td>
+</tr>
+</tbody>
+</table>

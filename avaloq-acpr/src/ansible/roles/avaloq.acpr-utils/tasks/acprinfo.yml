@@ -1,0 +1,54 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- block:
+  - name: Login to OpenShift
+    include_role:
+      name: avaloq.acpr-auth
+      tasks_from: login
+
+  - block:
+    # CRD takes some time therefore we apply it before processing templates
+    - name: Apply OpenShift CRD
+      command: 'oc apply -f {{ role_path }}/files/acprinfo/00_crd.yml'
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: oc_apply_artifact
+      changed_when: '("created" or "configured") in oc_apply_artifact.stdout'
+
+    - name: Process templates
+      template:
+        src: '{{ item }}'
+        dest: '{{ role_path }}/files/acprinfo/{{ (item|basename|splitext)[0] }}'
+      with_fileglob:
+        - "{{ role_path }}/templates/acprinfo/*.j2"
+
+    - name: Apply OpenShift Artifacts
+      command: 'oc apply -f {{ role_path }}/files/acprinfo'
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: oc_apply_artifact
+      changed_when: '("created" or "configured") in oc_apply_artifact.stdout'
+    when: avq_clusteradmin_available
+
+  - name: Show acprinfo not tracked hint
+    debug:
+      msg: "Acprinfo requires cluster-admin. Please track manually that {{ acpr_version_component_name }} was updated to {{ acpr_version }}."
+    when: not avq_clusteradmin_available
+
+  always:
+  - name: Logout from OpenShift
+    include_role:
+      name: avaloq.acpr-auth
+      tasks_from: logout

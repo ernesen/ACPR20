@@ -1,0 +1,602 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: prometheus
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    data:
+      prometheus.yml: |
+        global:
+          scrape_interval: 30s
+          scrape_timeout: 20s
+          evaluation_interval: 1m
+{% if acpr_monitoring_cluster_name is defined %}
+          external_labels:
+            cluster: '{{ acpr_monitoring_cluster_name }}'
+{% endif %}
+        rule_files:
+          - 'prometheus.rules'
+          - 'rules/infrastructure/*.rules'
+          - 'rules/application/*.rules'
+        scrape_configs:
+          - job_name: 'kubernetes-apiservers'
+            kubernetes_sd_configs:
+              - role: endpoints
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+                action: keep
+                regex: default;kubernetes;https
+
+          - job_name: 'kubernetes-nodes'
+            scheme: https
+            metrics_path: /metrics
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+              - role: node
+            relabel_configs:
+              - action: labelmap
+                regex: __meta_kubernetes_node_label_(.+)
+
+          - job_name: 'kubernetes-nodes-cadvisor'
+            scheme: https
+            metrics_path: /metrics/cadvisor
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+              - role: node
+            relabel_configs:
+              - action: labelmap
+                regex: __meta_kubernetes_node_label_(.+)
+
+          - job_name: 'node-exporters'
+            kubernetes_sd_configs:
+              - role: node
+            relabel_configs:
+              - action: labelmap
+                regex: __meta_kubernetes_node_label_(.+)
+              - source_labels: [__address__]
+                action: replace
+                target_label: __address__
+                regex: ([^:;]+):(\d+)
+                replacement: ${1}:9100
+              - source_labels: [__scheme__]
+                action: replace
+                target_label: __scheme__
+                regex: https
+                replacement: http
+
+          - job_name: 'kubernetes-controllers'
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+              - role: endpoints
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+                action: keep
+                regex: default;kubernetes;https
+              - source_labels: [__address__]
+                action: replace
+                target_label: __address__
+                regex: (.+)(?::\d+)
+                replacement: $1:8444
+
+          - job_name: kubernetes-pods
+            metrics_path: /metrics
+            scheme: http
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_namespace]
+                regex: ^openshift-logging$
+                action: drop
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                action: keep
+                regex: true
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+                action: replace
+                target_label: __scheme__
+                regex: (https?)
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                action: replace
+                target_label: __metrics_path__
+                regex: (.+)
+              - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                action: replace
+                target_label: __address__
+                regex: ([^:]+)(?::\d+)?;(\d+)
+                replacement: $1:$2
+              - source_labels: [__meta_kubernetes_namespace]
+                separator: ;
+                regex: (.*)
+                target_label: kubernetes_namespace
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_label_app]
+                separator: ;
+                regex: (.*)
+                target_label: app
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_label_avaloq_com_app]
+                separator: ;
+                regex: (.*)
+                target_label: avq_app
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_name]
+                separator: ;
+                regex: (.*)
+                target_label: kubernetes_pod_name
+                replacement: $1
+                action: replace
+
+              # Strimzi labels configuration
+              - source_labels: [__meta_kubernetes_pod_label_strimzi_io_cluster]
+                separator: ;
+                regex: (.*)
+                target_label: strimzi_io_cluster
+                replacement: $1
+                action: replace
+
+          - job_name: 'prometheus'
+            metrics_path: /metrics
+            static_configs:
+              - targets: ['localhost:9090']
+
+          - job_name: 'alertmanager'
+            metrics_path: /metrics
+            static_configs:
+              - targets: ['alertmanager-direct:9093']
+
+          - job_name: logging-pods
+            scrape_interval: 60s
+            scrape_timeout: 60s
+            metrics_path: /metrics
+            scheme: http
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            kubernetes_sd_configs:
+              - role: pod
+                namespaces:
+                  names:
+                  - openshift-logging
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                action: keep
+                regex: true
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scheme]
+                action: replace
+                target_label: __scheme__
+                regex: (https?)
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                action: replace
+                target_label: __metrics_path__
+                regex: (.+)
+              - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                action: replace
+                target_label: __address__
+                regex: ([^:]+)(?::\d+)?;(\d+)
+                replacement: $1:$2
+              - source_labels: [__meta_kubernetes_namespace]
+                separator: ;
+                regex: (.*)
+                target_label: kubernetes_namespace
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_label_app]
+                separator: ;
+                regex: (.*)
+                target_label: app
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_label_avaloq_com_app]
+                separator: ;
+                regex: (.*)
+                target_label: avq_app
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_label_deploymentconfig]
+                separator: ;
+                regex: (.*)
+                target_label: es_node
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_name]
+                separator: ;
+                regex: (.*)
+                target_label: kubernetes_pod_name
+                replacement: $1
+                action: replace
+              - source_labels: [__meta_kubernetes_pod_node_name]
+                separator: ;
+                regex: (.*)
+                target_label: kubernetes_node_name
+                replacement: $1
+                action: replace
+
+          {% if groups.etcd is defined -%}
+          - job_name: 'etcd-cluster'
+            static_configs:
+              - targets: [{% for node in groups.etcd %}'{{ node }}:2379'{% if not loop.last %},{% endif %}{% endfor %}]
+            scheme: https
+            tls_config:
+              cert_file: /etc/pki/etcd/etcd-client.crt
+              key_file: /etc/pki/etcd/etcd-client.key
+              ca_file: /etc/pki/etcd/etcd-client-ca.crt
+              insecure_skip_verify: true
+          {%- endif %}
+          
+          {% if acpr_monitoring_ocp3_prometheus_jobs|bool -%}
+          - job_name: alertmanager-main
+            scrape_interval: 30s
+            scrape_timeout: 10s
+            metrics_path: /metrics
+            static_configs:
+              - targets: ['localhost:9093']
+
+          - job_name: 'prometheus-k8s'
+            metrics_path: /metrics
+            static_configs:
+              - targets: ['localhost:9090']
+
+          - job_name: kube-state-metrics
+            metrics_path: /metrics
+            scheme: http
+            static_configs:
+              - targets: ['kube-state-metrics.acpr-monitoring.svc:8080']
+
+          - job_name: openshift-monitoring/kube-apiserver/0
+            scrape_interval: 30s
+            scrape_timeout: 10s
+            metrics_path: /metrics
+            scheme: https
+            kubernetes_sd_configs:
+            - api_server: null
+              role: endpoints
+              namespaces:
+                names:
+                - default
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              server_name: kubernetes
+              insecure_skip_verify: false
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_label_component]
+              separator: ;
+              regex: apiserver
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_service_label_provider]
+              separator: ;
+              regex: kubernetes
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              separator: ;
+              regex: https
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_namespace]
+              separator: ;
+              regex: (.*)
+              target_label: namespace
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_pod_name]
+              separator: ;
+              regex: (.*)
+              target_label: pod
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: service
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - source_labels: [__meta_kubernetes_service_label_component]
+              separator: ;
+              regex: (.+)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - separator: ;
+              regex: (.*)
+              target_label: endpoint
+              replacement: https
+              action: replace
+          - job_name: openshift-monitoring/kube-controllers/0
+            scrape_interval: 30s
+            scrape_timeout: 10s
+            metrics_path: /metrics
+            scheme: https
+            kubernetes_sd_configs:
+            - api_server: null
+              role: endpoints
+              namespaces:
+                names:
+                - kube-system
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              server_name: kubernetes
+              insecure_skip_verify: false
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: kube-controllers
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              separator: ;
+              regex: http-metrics
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_namespace]
+              separator: ;
+              regex: (.*)
+              target_label: namespace
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_pod_name]
+              separator: ;
+              regex: (.*)
+              target_label: pod
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: service
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: (.+)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - separator: ;
+              regex: (.*)
+              target_label: endpoint
+              replacement: http-metrics
+              action: replace
+          - job_name: openshift-monitoring/kubelet/0
+            honor_labels: true
+            scrape_interval: 30s
+            scrape_timeout: 10s
+            metrics_path: /metrics
+            scheme: https
+            kubernetes_sd_configs:
+            - api_server: null
+              role: endpoints
+              namespaces:
+                names:
+                - kube-system
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: false
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: kubelet
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              separator: ;
+              regex: https-metrics
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_namespace]
+              separator: ;
+              regex: (.*)
+              target_label: namespace
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_pod_name]
+              separator: ;
+              regex: (.*)
+              target_label: pod
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: service
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: (.+)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - separator: ;
+              regex: (.*)
+              target_label: endpoint
+              replacement: https-metrics
+              action: replace
+          - job_name: openshift-monitoring/kubelet/1
+            honor_labels: true
+            scrape_interval: 30s
+            scrape_timeout: 10s
+            metrics_path: /metrics/cadvisor
+            scheme: https
+            kubernetes_sd_configs:
+            - api_server: null
+              role: endpoints
+              namespaces:
+                names:
+                - kube-system
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              insecure_skip_verify: false
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: kubelet
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              separator: ;
+              regex: https-metrics
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_namespace]
+              separator: ;
+              regex: (.*)
+              target_label: namespace
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_pod_name]
+              separator: ;
+              regex: (.*)
+              target_label: pod
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: service
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: (.+)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - separator: ;
+              regex: (.*)
+              target_label: endpoint
+              replacement: https-metrics
+              action: replace
+          - job_name: openshift-monitoring/node-exporter/0
+            scrape_interval: 30s
+            scrape_timeout: 10s
+            metrics_path: /metrics
+            scheme: https
+            kubernetes_sd_configs:
+            - api_server: null
+              role: endpoints
+              namespaces:
+                names:
+                - acpr-monitoring
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+              server_name: prometheus-node-exporter.acpr-monitoring.svc
+              insecure_skip_verify: false
+            relabel_configs:
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: node-exporter
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_endpoint_port_name]
+              separator: ;
+              regex: https
+              replacement: $1
+              action: keep
+            - source_labels: [__meta_kubernetes_namespace]
+              separator: ;
+              regex: (.*)
+              target_label: namespace
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_pod_name]
+              separator: ;
+              regex: (.*)
+              target_label: pod
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: service
+              replacement: $1
+              action: replace
+            - source_labels: [__meta_kubernetes_service_name]
+              separator: ;
+              regex: (.*)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - source_labels: [__meta_kubernetes_service_label_k8s_app]
+              separator: ;
+              regex: (.+)
+              target_label: job
+              replacement: ${1}
+              action: replace
+            - separator: ;
+              regex: (.*)
+              target_label: endpoint
+              replacement: https
+              action: replace
+          {% endif %}
+{% if acpr_monitoring_prometheus_additional_jobs is defined %}
+{{ acpr_monitoring_prometheus_additional_jobs | indent(width=10, indentfirst=False)  }}
+{% endif %}
+
+        alerting:
+          alertmanagers:
+            - scheme: http
+              static_configs:
+                - targets:
+                    - "alertmanager-direct:9093"

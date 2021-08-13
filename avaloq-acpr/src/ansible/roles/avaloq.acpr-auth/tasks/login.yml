@@ -1,0 +1,111 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+# Try to login using cluster credentials
+- block:
+    - name: Copy login_ca temporary file
+      copy:
+        dest: "/tmp/login_ca"
+        content: "{{ acpr_cluster_credentials[0]['certificateAuthority'] }}"
+      when:
+        - acpr_cluster_credentials[0]['certificateAuthority'] is defined
+
+    - name: Login to the cluster using cluster credentials
+      command: >
+        oc --match-server-version=true login
+        {% if acpr_cluster_credentials[0]['username'] is defined and acpr_cluster_credentials[0]['password'] is defined %}
+         -u {{ acpr_cluster_credentials[0]['username'] }} -p {{ acpr_cluster_credentials[0]['password'] }}
+        {% endif %}
+        {% if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default(False) %}
+         --insecure-skip-tls-verify=true
+        {% endif %}
+        {% if acpr_cluster_credentials[0]['certificateAuthority'] is defined %}
+         --certificate-authority=/tmp/login_ca
+        {% endif %}
+        {% if acpr_cluster_credentials[0]['certificateAuthorityPath'] is defined %}
+         --certificate-authority={{ acpr_cluster_credentials[0]['certificateAuthorityPath'] }}
+        {% endif %}
+        {% if acpr_cluster_credentials[0]['token'] is defined %}
+         --token={{ acpr_cluster_credentials[0]['token'] }}
+        {% endif %}
+        {% if acpr_cluster_credentials[0]['url'] is defined %}
+         {{ acpr_cluster_credentials[0]['url'] | default(os_cluster_name) }}
+        {% endif %}
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: login_credentials
+      changed_when: false
+      no_log: true
+
+    - name: Remove login_ca temporary file
+      file:
+        path: "/tmp/login_ca"
+        state: absent
+  when: >
+    (acpr_cluster_credentials[0]['username'] is defined and acpr_cluster_credentials[0]['password'] is defined) or
+    acpr_cluster_credentials[0]['token'] is defined
+
+# Try to login using kubeconfig file
+- block:
+    - name: Check if KUBECONFIG file exists
+      stat:
+        path: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+      register: kubeconfigfile
+
+    - name: Try to login using KUBECONFIG file
+      command: oc whoami
+      register: login_kubeconfig
+      changed_when: false
+      failed_when: false
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+      when: kubeconfigfile.stat.exists
+
+    - name: Set 'KUBECONFIG' variable
+      copy:
+        src: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+        dest: "{{ KUBECONFIG }}"
+      delegate_to: localhost
+      when: kubeconfigfile.stat.exists and login_kubeconfig.rc == 0
+  when: login_credentials.rc | default(1) == 1
+
+# Try to login using kubeconfig file (copied from first master)
+- block:
+    - name: Copy admin.kubeconfig from first master host [become]
+      fetch:
+        src: '/etc/origin/master/admin.kubeconfig'
+        dest: '{{ KUBECONFIG }}'
+        flat: yes
+      become: yes
+      delegate_to: "{{ groups.masters[0] }}"
+  when:
+    - login_kubeconfig.rc | default(1) == 1
+    - login_credentials.rc | default(1) == 1
+    - acpr_os_maj_version == 3
+
+- name: Get current server
+  command: oc whoami --show-server
+  environment:
+    KUBECONFIG: "{{ KUBECONFIG }}"
+  register: current_server
+  changed_when: false
+  failed_when: false
+
+- name: Fail if logged in to a wrong cluster
+  fail:
+    msg: "It seems that administration host is logged in to a wrong cluster ({{ os_cluster_name }} != {{ current_server.stdout }})"
+  when: 'not os_cluster_name in current_server.stdout'
+
+- name: Import privilege verification
+  import_tasks: privilege_verification.yml

@@ -1,0 +1,76 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: RH-4.1 - 4.8 | Maintain the default OpenShift etcd, controller and apiserver pod file ownership & permissions
+  file:
+    path: '{{ item }}'
+    mode: 0600
+    owner: 0
+    group: 0
+  loop:
+    - /etc/origin/node/pods/apiserver.yaml
+    - /etc/origin/node/pods/controller.yaml
+    - /etc/origin/node/pods/etcd.yaml
+  when: inventory_hostname in groups['masters']
+
+- name: RH-4.9 - RH-4.10 | Maintain the default OpenShift Container Network Interface file ownership & permissions
+  block:
+    - name: Find sdn config files
+      find:
+        paths: ['/etc/origin/openvswitch', '/etc/cni/net.d']
+      register: find_result
+    - name: Enforce permissions on sdn config files
+      file:
+        path: "{{ item.path }}"
+        mode: '0644'
+        owner: root
+        group: root
+      loop: "{{ find_result.files }}"
+
+- name: Tasks which only apply to ose master servers
+  block:
+  - name: RH-4.11 - RH-4.12 | Maintain the default OpenShift etcd data directory & permissions
+    file:
+      path: /var/lib/etcd
+      mode: 0700
+      owner: root
+      group: root
+
+  - name: RH-4.13 - RH-4.18 | Maintain the default OpenShift admin.conf, scheduler.conf & controller file ownership & permissions
+    file:
+      path: '{{ item.path }}'
+      mode: '{{ item.mode }}'
+      owner: root
+      group: root
+    loop:
+      - { path: '/etc/origin/master/admin.kubeconfig', mode: '0600'}
+      - { path: '/etc/origin/master/openshift-master.kubeconfig', mode: '0600'}
+  when: inventory_hostname in groups['masters']
+
+- name: RH-8.1 - RH-8.6 | Maintain the kubeconfig file ownership & permissions
+  file:
+    path: '{{ item.path }}'
+    mode: '{{ item.mode }}'
+    owner: root
+    group: root
+  loop:
+    - { path: '/etc/origin/node/node.kubeconfig', mode: '0600'}
+    - { path: '/etc/systemd/system/atomic-openshift-node.service', mode: '0644'}
+
+- name: RH-8.7 - RH-8.8 | Maintain the certificate authorities file ownership & permissions
+  file:
+    path: /etc/origin/node/client-ca.crt
+    mode: 0644
+    owner: root
+    group: root

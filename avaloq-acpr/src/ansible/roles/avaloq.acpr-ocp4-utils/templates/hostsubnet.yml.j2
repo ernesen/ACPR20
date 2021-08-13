@@ -1,0 +1,14 @@
+apiVersion: network.openshift.io/v1
+kind: HostSubnet
+egressCIDRs:
+{% if acpr_egress is defined and acpr_egress_cidr is not defined %}
+{% for ip in acpr_egress|map(attribute='ip')|list %}
+- {{ ip }}/32
+{% endfor %}
+{% elif acpr_egress_cidr is defined %}
+- {{ acpr_egress_cidr }}
+{% endif %}
+metadata:
+  name: {{ item.metadata.name }}
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr

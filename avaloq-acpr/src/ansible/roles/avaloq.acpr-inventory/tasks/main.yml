@@ -1,0 +1,16 @@
+---
+- name: include variable sanity check
+  include_tasks: variable-sanity-check.yml
+
+- name: include package version verification
+  include_tasks: package-verification.yml
+
+- name: Include OCP 3 tasks
+  include_tasks: ocp3/main.yml
+  when:
+    - cust_os_version.split('.')[0] == 'v3'
+
+# Support OCP4 cust_os_release variables with and without leading 'v' (Eg. v4.6.3, 4.6.3)
+- name: Include OCP 4 tasks
+  include_tasks: ocp4/main.yml
+  when: cust_os_version | regex_search('^v?4\\.[0-9]+\\.[0-9]+$')

@@ -1,0 +1,383 @@
+groups:
+- name: acpr-rules
+  rules:
+  - alert: AlertmanagerDown [PAM1]
+    annotations:
+      message: Alertmanager has disappeared from Prometheus target discovery.
+      description: No new Alertmanager metrics available anymore.
+    expr: |
+      absent(up{job="alertmanager"} == 1)
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: NodeExporterDown [PAM5]
+    annotations:
+      message: NodeExporter has disappeared from Prometheus target discovery.
+      description: No new node_exporter metrics from the affected system available anymore.
+    expr: |
+      absent(up{job="node-exporters"} == 1)
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: PrometheusDown [PAM6]
+    annotations:
+      message: Prometheus has disappeared from Prometheus target discovery.
+      description: No new Prometheus metrics from Prometheus available anymore.
+    expr: |
+      absent(up{job="prometheus"} == 1)
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: AlertmanagerFailedReload [PAM12]
+    annotations:
+      message: Alertmanager's configuration reload failed
+      description: Reloading Alertmanager's configuration has failed for {{ $labels.namespace
+        }}/{{ $labels.pod}}.
+    expr: |
+      alertmanager_config_last_reload_successful{job="alertmanager"} == 0
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: TargetDown [PAM13]
+    annotations:
+      message: Targets are down
+      description: '{{ $value }}% of {{ $labels.job }} targets are down.'
+    expr: 100 * (count(up == 0) BY (job) / count(up) BY (job)) > 10
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusConfigReloadFailed [PAM14]
+    annotations:
+      message: Reloading Prometheus' configuration failed
+      description: Reloading Prometheus' configuration has failed for {{$labels.namespace}}/{{$labels.pod}}.
+    expr: |
+      prometheus_config_last_reload_successful{job="prometheus"} == 0
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusNotificationQueueRunningFull [PAM15]
+    annotations:
+      message: Prometheus' alert notification queue is running full
+      description: Prometheus' alert notification queue is running full for {{$labels.namespace}}/{{
+        $labels.pod}}.
+    expr: |
+      predict_linear(prometheus_notifications_queue_length{job="prometheus"}[5m], 60 * 30) > prometheus_notifications_queue_capacity{job="prometheus"}
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusErrorSendingAlerts [PAM16]
+    annotations:
+      message: Errors while sending alerts from Prometheus
+      description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{$labels.pod}} to Alertmanager {{$labels.Alertmanager}}.
+    expr: |
+      rate(prometheus_notifications_errors_total{job="prometheus"}[5m]) / rate(prometheus_notifications_sent_total{job="prometheus"}[5m]) > 0.01
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusErrorSendingAlerts [PAM17]
+    annotations:
+      message: Errors while sending alerts from Prometheus
+      description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{$labels.pod}} to Alertmanager {{$labels.Alertmanager}}.
+    expr: |
+      rate(prometheus_notifications_errors_total{job="prometheus"}[5m]) / rate(prometheus_notifications_sent_total{job="prometheus"}[5m]) > 0.03
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: PrometheusNotConnectedToAlertmanagers [PAM18]
+    annotations:
+      message: Prometheus is not connected to any Alertmanagers
+      description: Prometheus {{ $labels.namespace }}/{{ $labels.pod}} is not connected
+        to any Alertmanagers.
+    expr: |
+      prometheus_notifications_alertmanagers_discovered{job="prometheus"} < 1
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusTSDBReloadsFailing [PAM19]
+    annotations:
+      message: Prometheus has issues reloading data blocks from disk
+      description: '{{$labels.job}} at {{$labels.instance}} had {{$value | humanize}}
+        reload failures over the last two hours.'
+    expr: |
+      increase(prometheus_tsdb_reloads_failures_total{job="prometheus"}[2h]) > 0
+    for: 12h
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusTSDBCompactionsFailing [PAM20]
+    annotations:
+      message: Prometheus has issues compacting sample blocks
+      description: '{{$labels.job}} at {{$labels.instance}} had {{$value | humanize}}
+        compaction failures over the last two hours.'
+    expr: |
+      increase(prometheus_tsdb_compactions_failed_total{job="prometheus"}[2h]) > 0
+    for: 12h
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusTSDBWALCorruptions [PAM21]
+    annotations:
+      message: Prometheus write-ahead log is corrupted
+      description: '{{$labels.job}} at {{$labels.instance}} has a corrupted write-ahead
+        log (WAL).'
+    expr: |
+      prometheus_tsdb_wal_corruptions_total{job="prometheus"} > 0
+    for: 4h
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusNotIngestingSamples [PAM22]
+    annotations:
+      message: Prometheus isn't ingesting samples
+      description: Prometheus {{ $labels.namespace }}/{{ $labels.pod}} isn't ingesting
+        samples.
+    expr: |
+      rate(prometheus_tsdb_head_samples_appended_total{job="prometheus"}[5m]) <= 0
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: PrometheusTargetScrapesDuplicate [PAM23]
+    annotations:
+      message: Prometheus has many samples rejected
+      description: '{{$labels.namespace}}/{{$labels.pod}} has many samples rejected
+        due to duplicate timestamps but different values'
+    expr: |
+      increase(prometheus_target_scrapes_sample_duplicate_timestamp_total{job="prometheus"}[5m]) > 0
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: EtcdInsufficientMembers [PAM28]
+    annotations:
+      message: 'Etcd cluster has insufficient members'
+      description: 'Etcd cluster {{ $labels.job }}: insufficient members ({{ $value
+        }}).'
+    expr: |
+      count(up{job=~".*etcd.*"} == 0) by (job) > (count(up{job=~".*etcd.*"}) by (job) / 2 - 1)
+    for: 3m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: EtcdNoLeader [PAM30]
+    annotations:
+      message: 'Etcd cluster has no leader'
+      description: 'Etcd cluster {{ $labels.job }}: member {{ $labels.instance }}
+        has no leader.'
+      runbook: https://docs.avaloq.com/tools/avaloqcontainerplatform/700_Runbooks/030_pam30.html
+    expr: |
+      etcd_server_has_leader{job=~".*etcd.*"} == 0
+    for: 1m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: EtcdHighNumberOfLeaderChanges [PAM27]
+    annotations:
+      message: 'Etcd cluster has leader changes'
+      description: 'Etcd cluster {{ $labels.job }}: instance {{ $labels.instance }}
+        has seen {{ $value }} leader changes within the last hour.'
+    expr: |
+      rate(etcd_server_leader_changes_seen_total{job=~".*etcd.*"}[15m]) > 3
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: EtcdMemberCommunicationSlow [PAM29]
+    annotations:
+      message: 'Etcd cluster communication is slow'
+      description: 'Etcd cluster {{ $labels.job }}: member communication with {{ $labels.To
+        }} is taking {{ $value }}s on etcd instance {{ $labels.instance }}.'
+    expr: |
+      histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket{job=~".*etcd.*"}[5m]))
+      > 0.15
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: EtcdHighNumberOfFailedProposals [PAM26]
+    annotations:
+      message: 'Etcd cluster has proposal failures'
+      description: 'Etcd cluster {{ $labels.job }}: {{ $value }} proposal failures
+        within the last hour on etcd instance {{ $labels.instance }}.'
+    expr: |
+      rate(etcd_server_proposals_failed_total{job=~".*etcd.*"}[15m]) > 5
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: EtcdHighFsyncDurations [PAM25]
+    annotations:
+      message: 'Etcd cluster has high fsync duration'
+      description: 'Etcd cluster {{ $labels.job }}: 99th percentile fsync durations
+        are {{ $value }}s on etcd instance {{ $labels.instance }}.'
+    expr: |
+      histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=~".*etcd.*"}[5m]))
+      > 0.5
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: EtcdHighCommitDurations [PAM24]
+    annotations:
+      message: 'Etcd cluster has high commit duration'
+      description: 'Etcd cluster {{ $labels.job }}: 99th percentile commit durations
+        {{ $value }}s on etcd instance {{ $labels.instance }}.'
+    expr: |
+      histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket{job=~".*etcd.*"}[5m]))
+      > 0.25
+    for: 10m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: KubeAPIDown [PAM2]
+    annotations:
+      message: KubeAPI has disappeared from Prometheus target discovery.
+      description: No new  Kubernetes object specific metrics gathered via API available anymore.
+    expr: |
+      absent(up{job="kubernetes-apiservers"} == 1)
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: KubeControllerManagerDown [PAM3]
+    annotations:
+      message: KubeControllerManager has disappeared from Prometheus target discovery.
+      description: No new Kubernetes controller metrics available anymore.
+    expr: |
+      absent(up{job="kubernetes-controllers"} == 1)
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: KubeletDown [PAM4]
+    annotations:
+      message: Kubelet has disappeared from Prometheus target discovery.
+      description: No new Kubernetes node metrics available anymore.
+    expr: |
+      absent(up{job="kubernetes-nodes"} == 1)
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: KubePodNotReady [PAM7]
+    annotations:
+      message: 'Some pods are not ready'
+      description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in ready state.'
+    expr: |
+      sum by (namespace, pod) (kube_pod_status_phase{namespace=~"(acpr-.*|openshift-.*|kube-.*|default|logging)",job="kubernetes-pods", phase=~"Pending|Unknown"}) > 0
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: KubeNodeNotReady [PAM8]
+    annotations:
+      message: 'Kubernetes node is unready'
+      description: 'Kubernetes node {{ $labels.node }} has been unready for more than an hour'
+    expr: |
+      kube_node_status_condition{job="kubernetes-pods",condition="Ready",status="true"} == 0
+    for: 1h
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: KubeVersionMismatch [PAM9]
+    annotations:
+      message: There are {{ $value }} different versions of Kubernetes components
+        running.
+      description: There are {{ $value }} different versions of Kubernetes components
+        running.
+    expr: |
+      count(count(kubernetes_build_info{job!="kube-dns"}) by (gitVersion)) > 1
+    for: 1h
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: KubeClientCertificateExpiration [PAM10]
+    annotations:
+      message: A client certificate that is used to call the Kubernetes API is expiring in less than 7 days.
+      description: A client certificate that is used to call the Kubernetes API is expiring in less than 7 days.
+      runbook: https://docs.avaloq.com/tools/avaloqcontainerplatform/700_Runbooks/010_PAM10-11.html
+    expr: |
+      histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="kubernetes-apiservers"}[5m]))) < 604800
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: KubeClientCertificateExpiration [PAM11]
+    annotations:
+      message: A client certificate that is used to call the Kubernetes API is expiring in less than 1 day.
+      description: A client certificate that is used to call the Kubernetes API is expiring in less than 1 day.
+      runbook: https://docs.avaloq.com/tools/avaloqcontainerplatform/700_Runbooks/010_PAM10-11.html
+    expr: |
+      histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="kubernetes-apiservers"}[5m]))) < 86400
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: FileWithCustomMetricsIsOld [PAM31]
+    annotations:
+       message: File with custom metrics is old
+       description: File with custom metrics {{$labels.file}} on node {{$labels.instance}} is older than 3 minutes
+    expr: |
+        (time() - node_textfile_mtime_seconds) > 180
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: FileWithCustomMetricsCantBeRead [PAM32]
+    annotations:
+       message: File with custom metrics can't be read
+       description: One of the files on {{$labels.instance}} can't be read
+    expr: |
+       node_textfile_scrape_error == 1
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: NfsProcessesAreStuckInIoOperations [PAM33]
+    annotations:
+      message: Processes are waiting for NFS IO
+      description: More than one process is waiting for NFS IO operations on {{$labels.instance}}
+    expr: |
+       acpr_nfs_wait_processes > 0
+    for: 1m
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: NodeExporterIsNotReachable [PAM47]
+    for: 5m
+    annotations:
+      message: Prometheus Node exporter is not reachable
+      description: Prometheus Node exporter on {{ $labels.instance }} is not reachable
+    expr: |
+      up{job="node-exporters"} != 1
+    labels:
+      ruletype: infrastructure
+      severity: HIGH
+  - alert: AvaloqApplicationsPodNotReady [PAM74]
+    annotations:
+      message: 'Some pods are not ready'
+      description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in ready state.'
+    expr: |
+      sum by (namespace, pod) (kube_pod_status_phase{namespace!="(acpr-.*|openshift-.*|kube-.*|default|logging)",job="kubernetes-pods", phase=~"Pending|Unknown"}) > 0
+    for: 15m
+    labels:
+      ruletype: infrastructure
+      severity: LOW
+  - alert: AvaloqApplicationsPodNotReady [PAM75]
+    annotations:
+      message: 'Some pods are not ready'
+      description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in ready state.'
+    expr: |
+      sum by (namespace, pod) (kube_pod_status_phase{namespace!="(acpr-.*|openshift-.*|kube-.*|default|logging)",job="kubernetes-pods", phase=~"Pending|Unknown"}) > 0
+    for: 1h
+    labels:
+      ruletype: infrastructure
+      severity: HIGH

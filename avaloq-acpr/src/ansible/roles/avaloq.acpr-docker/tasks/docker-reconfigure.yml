@@ -1,0 +1,82 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- pause:
+    prompt: "Press return to continue with node {{ inventory_hostname }}. Press Ctrl+c and then \"a\" to abort"
+  when: acpr_reconfigure_docker_interactive_mode
+
+- name: Configure container registries.conf
+  template:
+    src: registries.conf.j2
+    dest: /etc/containers/registries.conf
+    backup: yes
+  register: containers_registries_configuration_file
+  become: true
+
+- name: Configure docker
+  template:
+    src: docker.j2
+    dest: /etc/sysconfig/docker
+    backup: yes
+  register: docker_daemon_configuration_file
+  become: true
+
+- block: # Because of https://github.com/ansible/ansible/issues/20493 can't use handlers here
+    - block:
+      - name: acpr login
+        include_role:
+          name: avaloq.acpr-auth
+          tasks_from: login.yml
+        
+      - name: Unschedule node
+        include_role:
+          name: avaloq.acpr-utils
+          tasks_from: unschedulable_node
+      
+      - name: Evacuate node
+        include_role:
+          name: avaloq.acpr-utils
+          tasks_from: evacuate_node
+
+      delegate_to: localhost
+      always:
+      - name: acpr logout
+        include_role:
+          name: avaloq.acpr-auth
+          tasks_from: logout.yml
+
+    - name: Restart docker
+      service:
+        name: docker
+        state: restarted
+      become: true
+
+    - block:
+      - name: acpr login
+        include_role:
+          name: avaloq.acpr-auth
+          tasks_from: login.yml
+    
+      - name: Schedule node
+        include_role:
+          name: avaloq.acpr-utils
+          tasks_from: schedulable_node
+
+      delegate_to: localhost
+      always:
+      - name: acpr logout
+        include_role:
+          name: avaloq.acpr-auth
+          tasks_from: logout.yml
+  when: containers_registries_configuration_file.changed or docker_daemon_configuration_file.changed

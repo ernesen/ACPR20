@@ -1,0 +1,43 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_LOGGING_UPDATE_CHANNEL</td>
+<td>Cluster and Logging are using a different update channel. Use this variable to control the version of the es-operator.</td>
+<td>false</td>
+<td>4.6</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_SUBSCRIPTION_SOURCE</td>
+<td></td>
+<td>false</td>
+<td>redhat-operators</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_STARTING_CSV</td>
+<td>Set a specific version of the operator</td>
+<td>false</td>
+<td>elasticsearch-operator.4.6.0-202102200141.p0</td>
+</tr>
+</tbody>
+</table>

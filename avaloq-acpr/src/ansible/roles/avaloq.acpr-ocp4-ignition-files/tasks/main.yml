@@ -1,0 +1,77 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Sanity checks
+  import_tasks: sanity_checks.yml
+
+- block:
+
+    - name: Generate install-config
+      template:
+        src: '{{ avq_invt_tmpl_f }}'
+        dest: '{{ acpr_ocp4_installer_wd }}/install-config.yaml'
+        backup: yes
+        mode: 0600
+
+    - name: Backup install-config
+      copy:
+        src: '{{ acpr_ocp4_installer_wd }}/install-config.yaml'
+        dest: '{{ acpr_ocp4_installer_wd }}/install-config.yaml.backup'
+
+    - name: Create installation manifests
+      command: /usr/local/bin/openshift-install create manifests --dir={{ acpr_ocp4_installer_wd }}
+      tags:
+        - skip_ansible_lint # ansible-lint E301: This task always needs to be run
+
+    - name: Set ingress domain
+      lineinfile:
+        path: '{{ acpr_ocp4_installer_wd }}/manifests/cluster-ingress-02-config.yml'
+        regexp: '^  domain: .*'
+        line: "  domain: {{ acpr_os_def_subdomain }}"
+
+    - name: Create ignition-configs
+      command: /usr/local/bin/openshift-install create ignition-configs --dir={{ acpr_ocp4_installer_wd }}
+      tags:
+        - skip_ansible_lint # ansible-lint E301: This task always needs to be run
+
+    - name: Show directory hint
+      debug:
+        msg: 'OpenShift 4 ignition files have been created in {{ acpr_ocp4_installer_wd }}'
+  when: not files_found.matched > 0
+
+- block:
+    - name: Find all *ign files
+      find:
+        paths: "{{ acpr_webserver_ignition_file_path }}"
+        patterns: "*ign"
+      register: files_to_delete
+
+    - name: Remove *ign files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ files_to_delete.files }}"
+  when: not acpr_serve_ignition_files | bool
+  become: true
+
+- name: Copy ignition files
+  become: true
+  copy:
+    src: '{{ item }}'
+    dest: "{{ acpr_webserver_ignition_file_path }}"
+    owner: root
+    mode: '0644'
+  with_fileglob:
+    - '{{ acpr_ocp4_installer_wd }}/*ign'
+  when: acpr_serve_ignition_files | bool

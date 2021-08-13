@@ -1,0 +1,8 @@
+---
+api_version: v1
+kind: Node
+name: "{{ item.0.name }}"
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr
+    {% if item.1 is search('=') %}{{ item.1.split('=')[0] }}: "{{ item.1.split('=')[1] }}"{% else %}{{ item.1 }}: '' {% endif %}

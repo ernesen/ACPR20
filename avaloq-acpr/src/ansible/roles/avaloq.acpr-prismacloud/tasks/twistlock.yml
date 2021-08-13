@@ -1,0 +1,156 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- block:
+    - name: Get temporary deployment folder
+      tempfile:
+        state: directory
+        suffix: _twistlock_deployment
+      register: deployment_folder
+
+    - name: Process templates
+      template:
+        src: "{{ item }}"
+        dest: "{{ deployment_folder.path }}/{{ item | basename }}"
+      with_fileglob: "{{ role_path }}/templates/*"
+
+    - name: Login to OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: login
+
+    - name: Apply OpenShift artifacts
+      command: "oc apply -n {{ idx.value.namespace }} -f {{ deployment_folder.path }}/"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      changed_when: false
+
+    - name: Get Prisma Cloud pod
+      command: "oc get pods -l name=twistlock-console -o jsonpath={.items[0].metadata.name} -n {{ idx.value.namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      changed_when: False
+      register: twistlock_pod
+      until: "'twistlock-console-' in twistlock_pod.stdout"
+
+    - name: Wait for the Prisma Cloud Console
+      command: >
+        oc exec -n {{ idx.value.namespace }} {{ twistlock_pod.stdout }} --
+        curl -o /dev/null -s -w '%{http_code}\n' -k https://localhost:8083/api/v1/_ping
+      changed_when: False
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: result
+      until: "'200' in result.stdout"
+      retries: 120
+      delay: 15
+
+    - name: Signup to the Prisma Cloud Console
+      command: >
+        oc exec -n {{ idx.value.namespace }} {{ twistlock_pod.stdout }} --
+        curl -o /dev/null -s -w '%{http_code}\n' -k -XPOST --header "Content-Type: application/json" --data
+        '{
+          "username": "{{ idx.value.console.username }}",
+          "password": "{{ idx.value.console.password }}"
+        }' https://localhost:8083/api/v1/signup
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: "'200' not in result.stdout"
+      changed_when: False
+
+    - name: Set up Prisma Cloud license
+      command: >
+        oc exec -n {{ idx.value.namespace }} {{ twistlock_pod.stdout }} --
+        curl -o /dev/null -s -w '%{http_code}\n' -k -XPOST --header "Content-Type: application/json" -u {{ idx.value.console.username }}:{{ idx.value.console.password }} --data
+        '{
+          "key": "{{ idx.value.license_key }}"
+        }' https://localhost:8083/api/v1/settings/license
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: "'200' not in result.stdout"
+      changed_when: False
+
+    - name: Get Prisma Cloud tls private key
+      command: "oc get secret twistlock-console-tls -o jsonpath=\"{.data.tls\\.key}\" -n {{ idx.value.namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: false
+      changed_when: false
+      register: console_key
+
+    - name: Get Prisma Cloud tls certificate
+      command: "oc get secret twistlock-console-tls -o jsonpath=\"{.data.tls\\.crt}\" -n {{ idx.value.namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: false
+      changed_when: false
+      register: console_crt
+
+    - name: Set Prisma Cloud certificate and key variables
+      set_fact:
+        certificate: "{{ console_crt.stdout | b64decode | replace('\n', '\\n') }}"
+        key: "{{ console_key.stdout | b64decode | replace('\n', '\\n') }}"
+
+    - name: Configure Prisma Cloud Console SSL
+      command: >
+        oc exec -n {{ idx.value.namespace }} {{ twistlock_pod.stdout }} --
+        curl -o /dev/null -s -w '%{http_code}\n' -k -XPOST --header "Content-Type: application/json" -u {{ idx.value.console.username }}:{{ idx.value.console.password }} --data
+        '{
+          "consoleCustomCert": {
+            "encrypted": "",
+            "plain": "{{ certificate + key }}"
+          }
+        }' https://localhost:8083/api/v1/settings/console-certificate
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      changed_when: False
+
+    - name: Get Prisma Cloud console route
+      command: "oc get route twistlock -o jsonpath={.spec.host} -n {{ idx.value.namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: twistlock_address
+
+    - name: Store route in fact
+      set_fact:
+        twistlock_address: "{{ twistlock_address.stdout }}"
+
+    - name: Wait for the Prisma Cloud Console
+      uri:
+        url: "https://{{ twistlock_address }}/api/v1/_ping"
+        method: GET
+        status_code: 200
+        validate_certs: no
+      register: result
+      until: result.status == 200
+      retries: 120
+      delay: 15
+
+    - name: Deploy DaemonSet
+      include_tasks: daemonset.yml
+
+    - name: Configure Prometheus
+      include_tasks: prometheus.yml
+
+  always:
+    - name: Logout from OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout
+    - name: Remove temporary
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ deployment_folder.path }}"

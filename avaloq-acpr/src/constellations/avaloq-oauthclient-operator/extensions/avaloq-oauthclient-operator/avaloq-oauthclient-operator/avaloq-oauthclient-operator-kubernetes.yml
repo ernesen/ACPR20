@@ -1,0 +1,254 @@
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: AVALOQ_CONTAINER_IMAGE_REGISTRY
+    description: URL of the container image registry. Must end with "/", unless you
+      set it to null.
+    value: registry.service.avaloq.com/
+    validation:
+      required: false
+      type: text
+      pattern: ^$|^.+/$
+  - name: AVALOQ_CONTAINER_IMAGE_NAMESPACE
+    value: avaloq/
+    validation:
+      required: false
+      type: text
+      pattern: ^$|^.+/$
+    description: |
+      The namespace of the container image. Must end with "/", unless you set it to an empty value. Example: `avaloq/`
+  - name: OPENSHIFT_NAMESPACE
+    validation:
+      type: text
+      required: false
+    value: acpr-oauthclient-operator
+    description: |
+      OpenShift namespace where to deploy `avaloq-oauthclient-operator`
+  - name: AVALOQ_OAUTHCLIENT_OPERATOR_REPLICAS
+    value: 1
+    validation:
+      required: false
+      type: number
+      range:
+        min: 0
+    description: |
+      The number of application replicas.
+  - name: AVALOQ_OAUTHCLIENT_OPERATOR_REQUESTS_CPU
+    value: 5m
+    validation:
+      required: false
+      type: text
+    description: |
+      The cpu requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  - name: AVALOQ_OAUTHCLIENT_OPERATOR_REQUESTS_MEMORY
+    value: 512Mi
+    validation:
+      required: false
+      type: text
+    description: |
+      The memory requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  - name: AVALOQ_OAUTHCLIENT_OPERATOR_LIMITS_CPU
+    value: 2
+    validation:
+      required: false
+      type: text
+    description: |
+      The cpu limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  - name: AVALOQ_OAUTHCLIENT_OPERATOR_LIMITS_MEMORY
+    value: 512Mi
+    validation:
+      required: false
+      type: text
+    description: |
+      The memory limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: avaloq-localoauthclient-editor
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: 'true'
+    rbac.authorization.k8s.io/aggregate-to-edit: 'true'
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator
+rules:
+- apiGroups:
+  - avaloq.com
+  resources:
+  - localoauthclients
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: avaloq-oauthclient-operator
+  labels:
+    app.kubernetes.io/name: avaloq-oauthclient-operator
+    app.kubernetes.io/part-of: avaloq-oauthclient-operator
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator
+rules:
+- apiGroups:
+  - oauth.openshift.io
+  resources:
+  - oauthclients
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - avaloq.com
+  resources:
+  - localoauthclients
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: avaloq-oauthclient-operator
+  labels:
+    app.kubernetes.io/name: avaloq-oauthclient-operator
+    app.kubernetes.io/part-of: avaloq-oauthclient-operator
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: avaloq-oauthclient-operator
+subjects:
+- kind: ServiceAccount
+  name: avaloq-oauthclient-operator
+  namespace: acpr-oauthclient-operator
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: localoauthclients.avaloq.com
+  labels:
+    name: localoauthclient.avaloq.com
+    app.kubernetes.io/name: avaloq-oauthclient-operator
+    app.kubernetes.io/part-of: avaloq-oauthclient-operator
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator
+spec:
+  group: avaloq.com
+  names:
+    kind: LocalOAuthClient
+    listKind: LocalOAuthClientList
+    plural: localoauthclients
+    shortNames:
+    - loac
+    singular: localoauthclient
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avaloq-oauthclient-operator
+  labels:
+    app.kubernetes.io/name: avaloq-oauthclient-operator
+    app.kubernetes.io/part-of: avaloq-oauthclient-operator
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator
+    avaloq.com/zone: core-internal
+  namespace: acpr-oauthclient-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: avaloq-oauthclient-operator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: '9090'
+        prometheus.io/scheme: http
+        prometheus.io/scrape: 'true'
+      labels:
+        app: avaloq-oauthclient-operator
+        app.kubernetes.io/component: proxy
+        avaloq.com/app: avaloq-oauthclient-operator
+        avaloq.com/zone: core-internal
+    spec:
+      serviceAccountName: avaloq-oauthclient-operator
+      containers:
+      - name: avaloq-oauthclient-operator
+        image: ${AVALOQ_CONTAINER_IMAGE_REGISTRY}${AVALOQ_CONTAINER_IMAGE_NAMESPACE}avaloq-oauthclient-operator:0.1.3
+        ports:
+        - containerPort: 9090
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${AVALOQ_OAUTHCLIENT_OPERATOR_LIMITS_CPU}
+            memory: ${AVALOQ_OAUTHCLIENT_OPERATOR_LIMITS_MEMORY}
+          requests:
+            cpu: ${AVALOQ_OAUTHCLIENT_OPERATOR_REQUESTS_CPU}
+            memory: ${AVALOQ_OAUTHCLIENT_OPERATOR_REQUESTS_MEMORY}
+        env:
+        - name: LOGGING_CONFIG
+          value: classpath:log4j2-JSON_FORMATTER.xml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/description: Avaloq OAuthClient Operator
+    openshift.io/display-name: ACPR OAuthClient Operator
+  name: ${OPENSHIFT_NAMESPACE}
+  labels:
+    app.kubernetes.io/name: avaloq-oauthclient-operator
+    app.kubernetes.io/part-of: avaloq-oauthclient-operator
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator
+spec:
+  finalizers:
+  - kubernetes
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: avaloq-oauthclient-operator
+  namespace: acpr-oauthclient-operator
+  labels:
+    app.kubernetes.io/name: avaloq-oauthclient-operator
+    app.kubernetes.io/part-of: avaloq-oauthclient-operator
+    app.kubernetes.io/component: proxy
+    avaloq.com/app: avaloq-oauthclient-operator

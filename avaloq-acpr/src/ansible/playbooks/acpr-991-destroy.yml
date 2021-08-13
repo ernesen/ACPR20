@@ -1,0 +1,100 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: ACPR | execute uninstall-openshift playbook
+  vars:
+    ansible_become: true
+  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall_openshift.yml
+
+- name: ACPR | execute uninstall-docker playbook
+  vars:
+    ansible_become: true
+  import_playbook: /usr/share/ansible/openshift-ansible/playbooks/adhoc/uninstall_docker.yml
+
+- name: ACPR | remove htpasswd files
+  hosts: localhost
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: delete htpasswd files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ openshift_master_htpasswd_file }}"
+        - "{{ openshift_master_htpasswd_file }}-plain"
+      when: openshift_master_htpasswd_file is defined
+
+- name: ACPR | finish uninstall
+  hosts: nodes
+  become: yes
+  any_errors_fatal: true
+  tasks:
+    - name: Remove docker packages
+      yum:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - docker
+        - docker-client
+        - docker-common
+
+    - name: Gather service facts
+      service_facts:
+
+    - name: Gather rpm package facts
+      package_facts:
+
+    - name: Check if services are not running
+      assert:
+        that:
+          - ansible_facts.services['{{ item }}'] is not defined
+      loop:
+        - docker.service
+        - atomic-openshift-node.service
+
+    - name: Check if packages are uninstalled
+      assert:
+        that:
+          - ansible_facts.packages['{{ item }}'] is not defined
+      loop:
+        - docker
+        - atomic-openshift-node
+        - atomic-openshift-hyperkube
+
+    - name: Remove additional files & directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/docker
+        - /var/lib/cni/networks
+        - /etc/cni/net.d
+
+    - name: Remove OpenShift installer
+      yum:
+        name: '{{ item }}'
+        state: absent
+      loop:
+        - openshift-ansible-playbooks
+        - openshift-ansible-roles
+        - openshift-ansible-docs
+        - openshift-ansible
+      delegate_to: localhost
+      run_once: true

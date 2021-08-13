@@ -1,0 +1,177 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-es-cluster
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: elasticsearch
+          component: es
+      ingress:
+        - ports:
+          - port: 9300
+            protocol: TCP
+          from:
+            - podSelector:
+                matchLabels:
+                  logging-infra: elasticsearch
+                  component: es
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-es
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: elasticsearch
+          component: es
+      ingress:
+        - ports:
+          - port: 9200
+            protocol: TCP
+          from:
+            - podSelector:
+                matchLabels:
+                  logging-infra: kibana
+                  component: kibana
+            - podSelector:
+                matchLabels:
+                  logging-infra: fluentd
+                  component: fluentd
+            - podSelector:
+                matchLabels:
+                  logging-infra: curator
+                  component: curator
+            - namespaceSelector:
+                matchLabels:
+                  role: monitoring
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-es-ops-cluster
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: elasticsearch
+          component: es-ops
+      ingress:
+        - ports:
+          - port: 9300
+            protocol: TCP
+          from:
+            - podSelector:
+                matchLabels:
+                  logging-infra: elasticsearch
+                  component: es-ops
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-es-ops
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: elasticsearch
+          component: es-ops
+      ingress:
+        - ports:
+          - port: 9200
+            protocol: TCP
+          from:
+            - podSelector:
+                matchLabels:
+                  logging-infra: kibana
+                  component: kibana-ops
+            - podSelector:
+                matchLabels:
+                  logging-infra: fluentd
+                  component: fluentd
+            - podSelector:
+                matchLabels:
+                  logging-infra: curator
+                  component: curator-ops
+            - namespaceSelector:
+                matchLabels:
+                  role: monitoring
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-kibana-ops
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: kibana
+          component: kibana-ops
+      ingress:
+        - ports:
+          - port: 3000
+            protocol: TCP
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  network.openshift.io/policy-group: ingress
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-kibana
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: kibana
+          component: kibana
+      ingress:
+        - ports:
+          - port: 3000
+            protocol: TCP
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  network.openshift.io/policy-group: ingress
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: logging-fluentd-prometheus
+      namespace: openshift-logging
+    spec:
+      podSelector:
+        matchLabels:
+          logging-infra: fluentd
+          component: fluentd
+      ingress:
+        - ports:
+          - port: 24231
+            protocol: TCP
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  role: monitoring
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: default-deny-all
+      namespace: openshift-logging
+    spec:
+      podSelector: {}
+      ingress: []

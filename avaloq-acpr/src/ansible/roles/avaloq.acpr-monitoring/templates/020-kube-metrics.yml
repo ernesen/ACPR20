@@ -1,0 +1,232 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+
+  ### ServiceAccount
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: kube-state-metrics
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+
+  ### Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: kube-state-metrics
+      labels:
+        k8s-app: kube-state-metrics
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      annotations:
+        prometheus.io/scrape: 'true'
+    spec:
+      ports:
+        - name: http-metrics
+          port: 8080
+          targetPort: http-metrics
+          protocol: TCP
+        - name: telemetry
+          port: 8081
+          targetPort: telemetry
+          protocol: TCP
+      selector:
+        k8s-app: kube-state-metrics
+
+  ### NetworkPolicy
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: kube-state-metrics
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      ingress:
+        - ports:
+            - port: 8080
+              protocol: TCP
+          from:
+            - podSelector:
+                matchLabels:
+                  app: prometheus
+      podSelector:
+        matchLabels:
+          k8s-app: kube-state-metrics
+
+  ### Role
+  - apiVersion: v1
+    kind: Role
+    metadata:
+      name: kube-state-metrics-resizer
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    rules:
+      - apiGroups: [""]
+        resources:
+          - pods
+        verbs: ["get"]
+      - apiGroups: ["extensions"]
+        resources:
+          - deployments
+        resourceNames: ["kube-state-metrics"]
+        verbs: ["get", "update"]
+
+  ### ClusterRole
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: kube-state-metrics
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    rules:
+      - apiGroups: [""]
+        resources:
+          - nodes
+          - pods
+          - services
+          - resourcequotas
+          - replicationcontrollers
+          - limitranges
+          - persistentvolumeclaims
+          - persistentvolumes
+          - namespaces
+          - endpoints
+          - configmaps
+          - secrets
+        verbs: ["list", "watch"]
+      - apiGroups: ["extensions"]
+        resources:
+          - daemonsets
+          - deployments
+          - replicasets
+        verbs: ["list", "watch"]
+      - apiGroups: ["apps"]
+        resources:
+          - statefulsets
+        verbs: ["list", "watch"]
+      - apiGroups: ["batch"]
+        resources:
+          - cronjobs
+          - jobs
+        verbs: ["list", "watch"]
+      - apiGroups: ["autoscaling"]
+        resources:
+          - horizontalpodautoscalers
+        verbs: ["list", "watch"]
+
+  ### RoleBinding
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: kube-state-metrics
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: kube-state-metrics-resizer
+    subjects:
+      - kind: ServiceAccount
+        name: kube-state-metrics
+
+  ### ClusterRoleBinding
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: acpr-monitoring-kube-state-metrics
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: kube-state-metrics
+    subjects:
+      - kind: ServiceAccount
+        name: kube-state-metrics
+        namespace: {{ namespace }}
+
+  ### Deployment
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: kube-state-metrics
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+        avaloq.com/zone: core-internal
+    spec:
+      selector:
+        matchLabels:
+          k8s-app: kube-state-metrics
+      replicas: 1
+      template:
+        metadata:
+          annotations:
+            prometheus.io/port: '8080'
+            prometheus.io/scheme: http
+            prometheus.io/scrape: 'true'
+          labels:
+            k8s-app: kube-state-metrics
+            avaloq.com/app: acpr-monitoring
+            app.kubernetes.io/component: monitoring
+        spec:
+          serviceAccountName: kube-state-metrics
+          containers:
+            - name: kube-state-metrics
+              image: {{ acpr_monitoring_kube_state_metrics_image }}
+              args:
+                - '--host=0.0.0.0'
+                - '--port=8080'
+                - '--telemetry-host=127.0.0.1'
+                - '--telemetry-port=8081'
+              ports:
+                - name: http-metrics
+                  containerPort: 8080
+                - name: telemetry
+                  containerPort: 8081
+              readinessProbe:
+                httpGet:
+                  path: /healthz
+                  port: 8080
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+{% if acpr_monitoring_kube_state_metrics_resources_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_kube_state_metrics_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_kube_state_metrics_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_kube_state_metrics_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_kube_state_metrics_resources_request_memory }}
+{% endif %}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+                - mountPath: /tmp
+                  name: volume-directive-shadow
+          nodeSelector:
+            node-role.kubernetes.io/compute: "true"
+          volumes:
+            - emptyDir: {}
+              name: volume-directive-shadow

@@ -1,0 +1,366 @@
+#!groovy
+
+/*
+ * Copyright 2019 Avaloq Evolution AG
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * The following Jenkins pipeline deploys a constellation to an ACPR cluster.
+ *
+ * Notes:
+ * * Adjust the parameter default values and environment variables to your needs.
+ * * Keep the stage names short in order to take account of the limited space in the UI.
+ */
+
+@NonCPS
+def urlToFileName(def url) {
+    return url.substring(url.lastIndexOf('/') + 1, url.length())
+}
+
+@NonCPS
+def insertVersion(def path, def version) {
+    return path.replaceAll('@INSTALLATOR_VERSION@', version)
+}
+
+pipeline {
+
+    agent any
+
+    environment {
+        INSTALLATOR_RELEASE_URL = "https://repo.example.net/m2/com/avaloq/avaloq-installator/@INSTALLATOR_VERSION@/avaloq-installator-@INSTALLATOR_VERSION@-x64_linux.tgz"
+        OC_CLI_RELEASE_URL = "https://repo.example.net/m2/com/openshift/oc/${params.OPENSHIFT_CLI_VERSION}/oc-${params.OPENSHIFT_CLI_VERSION}-linux.tar.gz"
+        INSTALLATOR = "./avaloq-installator-boot-@INSTALLATOR_VERSION@/bin/avaloq-installator"
+        OC = "./oc"
+        INSTALLATOR_CONFIG = "${env.WORKSPACE}/installatorconfig"
+        KUBECONFIG = "${env.WORKSPACE}/kubeconfig"
+        WGET_ARGS = "-nv --no-proxy"
+        OC_LOGIN_ARGS = "--insecure-skip-tls-verify=true"
+        RESOURCES_TO_DELETE = "pvc,deployments,statefulsets,secret,configmap,route,service,job,NetworkPolicy,DatabaseSchema,LocalOAuthClient,Kafka,KafkaUser,KafkaTopic,KafkaConnect,KafkaConnectS2I,KafkaConnector,KafkaMirrorMaker,KafkaMirrorMaker2,KafkaBridge,ServiceAccount,Role"
+    }
+
+    parameters {
+        string(
+                name: 'REPOSITORY_URL',
+                defaultValue: 'ssh://git.example.com/project/repo.git',
+                description: 'URL of git repository holding the Constellation'
+        )
+        string(
+                name: 'BRANCH',
+                defaultValue: 'master',
+                description: 'Branch to use from git repository (possible values are refs/heads/&lt;branchName&gt;, refs/tags/&lt;tagName&gt;, or &lt;commitId&gt;)'
+        )
+        string(
+                name: 'CONSTELLATION_URL',
+                defaultValue: '',
+                description: 'URL of the zipped Constellation (only used if not taken from git, i.e. REPOSITORY_URL is empty)'
+        )
+        string(
+                name: 'CONSTELLATION_PATH',
+                defaultValue: '',
+                description: 'Relative path to the constellation.yml from the root of the git repository or Constellation ZIP file'
+        )
+        string(
+                name: 'CONSTELLATION_FILE_PATH',
+                defaultValue: '',
+                description: 'Alternative ./constellation.yml file path to be used as constellation-file option for Installator fetch command, relative to CONSTELLATION_PATH'
+        )
+        string(
+                name: 'CONFIG_SET_URL',
+                defaultValue: '',
+                description: 'URL of the zipped Config Set (downloaded and unzipped inside the Constellation\'s config-set folder, if not empty)'
+        )
+        string(
+                name: 'CONFIG_SET',
+                defaultValue: '',
+                description: 'Name of Config Set to be used, need to match any Config Set included in Constellation or CONFIG_SET_URL, leave empty if there is no Config Set'
+        )
+        string(
+                name: 'INSTALLATOR_VERSION',
+                defaultValue: '1.10.0',
+                description: 'Version of the Avaloq Installator to use for configuring and deploying the Constellation (fallback only, if not specified in configuration.yml)'
+        )
+        booleanParam(
+                name: 'FORCE_VERSION',
+                defaultValue: false,
+                description: 'Forces to use INSTALLATOR_VERSION regardless of which version is specified in configuration.yml'
+        )
+        string(
+                name: 'INSTALLATOR_PARAMETERS',
+                defaultValue: '',
+                description: '--P and comma-separated list of parameters to pass additionally to the Avaloq Installator'
+        )
+        choice(
+                name: 'OPENSHIFT_URL',
+                choices: [
+                        'openshift.example.net',
+                        'openshift-test.example.net'
+                ], description: 'URL of the OpenShift cluster'
+        )
+        password(
+                name: 'OPENSHIFT_TOKEN',
+                defaultValue: '',
+                description: 'Token to use to authenticate against and execute oc commands on OpenShift cluster (e.g. from user or Jenkins service account)'
+        )
+        credentials(
+                name: 'JENKINS_CREDENTIALS',
+                defaultValue: '',
+                credentialType: 'Secret text',
+                description: 'Jenkins Credentials of type Secret Text providing OpenShift token used instead of OPENSHIFT_TOKEN (can be credentials ID as String or bound to Credentials Parameter)'
+        )
+        string(
+                name: 'OPENSHIFT_CLI_VERSION',
+                defaultValue: '3.11.248',
+                description: 'Version of the OpenShift command line interface (oc)'
+        )
+        string(
+                name: 'NAMESPACE',
+                defaultValue: '',
+                description: 'Namespace on OpenShift the Constellation is deployed into (will be created automatically if not existing)'
+        )
+        booleanParam(
+                name: 'CLEAR_NAMESPACE',
+                defaultValue: false,
+                description: 'Removes any existing Kubernetes objects from the namespace before deploying'
+        )
+        booleanParam(
+                name: 'REMOVE_AGAIN',
+                defaultValue: false,
+                description: 'Removes all Kubernetes objects from the namespace again after deploying (meant for verification builds)'
+        )
+        string(
+                name: 'ADMIN_USERS',
+                defaultValue: '',
+                description: 'Comma-separated list of users that will be granted Administrator role on namespace'
+        )
+        booleanParam(
+                name: 'MANUAL_VERIFY',
+                defaultValue: false,
+                description: 'Pauses the pipeline before executing deploy commands for manual verification and approval'
+        )
+    }
+
+    stages {
+
+        stage('Checkout constellation') {
+            steps {
+                step([$class: 'WsCleanup'])
+                script {
+                    if (params.REPOSITORY_URL) {
+                        checkout scm: [
+                                $class           : 'GitSCM',
+                                userRemoteConfigs: [[url: params.REPOSITORY_URL]],
+                                branches         : [[name: params.BRANCH]],
+                                extensions       : [
+                                        [
+                                                $class   : 'CloneOption',
+                                                depth    : 1,
+                                                noTags   : false,
+                                                reference: '',
+                                                shallow  : true
+                                        ]
+                                ]
+                        ]
+                    } else {
+                        sh "wget ${env.WGET_ARGS} ${params.CONSTELLATION_URL}"
+                        sh "unzip ${urlToFileName(params.CONSTELLATION_URL)}"
+                    }
+                    // Following variable will be also used in the following stages (no 'def')
+                    constellationHome = "${env.WORKSPACE}/"
+                    if (params.CONSTELLATION_PATH?.trim()) {
+                        constellationHome += params.CONSTELLATION_PATH
+                    }
+                    dir(constellationHome) {
+                        if (params.CONFIG_SET_URL) {
+                            sh "wget ${env.WGET_ARGS} ${params.CONFIG_SET_URL}"
+                            sh "unzip ${urlToFileName(params.CONFIG_SET_URL)}"
+                        }
+                        // Following variable will be also used in the following stages (no 'def')
+                        installatorVersion = params.INSTALLATOR_VERSION
+                        if (!params.FORCE_VERSION || !params.INSTALLATOR_VERSION) {
+                            def configurationFile = new File(constellationHome + "/configuration.yml")
+                            if (configurationFile.exists()) {
+                                def configuration = readYaml(text: configurationFile.text)
+                                if (configuration.version) {
+                                    echo "Setting Installator version according to configuration.yml to ${configuration.version}"
+                                    installatorVersion = configuration.version
+                                } else {
+                                    echo "Installator version not found in configuration.yml, using INSTALLATOR_VERSION (${params.INSTALLATOR_VERSION}) as fallback"
+                                }
+                            } else {
+                                echo "configuration.yml not found for parsing Installator version, using INSTALLATOR_VERSION (${params.INSTALLATOR_VERSION}) as fallback"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Download Tools') {
+            failFast true
+            parallel {
+                stage('Download OpenShift CLI') {
+                    steps {
+                        dir(constellationHome) {
+                            sh "wget ${env.WGET_ARGS} ${env.OC_CLI_RELEASE_URL}"
+                            sh "tar -xvzf ${urlToFileName(env.OC_CLI_RELEASE_URL)}"
+                        }
+                    }
+                }
+                stage('Download Installator') {
+                    steps {
+                        dir(constellationHome) {
+                            script {
+                                def installatorReleaseUrl = insertVersion(env.INSTALLATOR_RELEASE_URL, installatorVersion)
+                                sh "wget ${env.WGET_ARGS} ${installatorReleaseUrl}"
+                                sh "tar -xvzf ${urlToFileName(installatorReleaseUrl)}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Configure project') {
+            steps {
+                dir(constellationHome) {
+                    script {
+                        if (params.JENKINS_CREDENTIALS) {
+                            withCredentials([string(credentialsId: params.JENKINS_CREDENTIALS, variable: 'TOKEN')]) {
+                                script {
+                                    echo "Logging in to OpenShift using JENKINS_CREDENTIALS..."
+                                    sh "${env.OC} login ${params.OPENSHIFT_URL} ${env.OC_LOGIN_ARGS} --token=${TOKEN}"
+                                }
+                            }
+                        } else {
+                            echo "Logging in to OpenShift using OPENSHIFT_TOKEN..."
+                            sh "${env.OC} login ${params.OPENSHIFT_URL} ${env.OC_LOGIN_ARGS} --token=${params.OPENSHIFT_TOKEN}"
+                        }
+                        // Following variable will be also used in the next stage (no 'def')
+                        projectExistsReturnStatus = sh returnStatus: true, script: "${env.OC} project ${params.NAMESPACE} -q > /dev/null 2>&1"
+                        if (projectExistsReturnStatus != 0) {
+                            echo "Creating project ${params.NAMESPACE}..."
+                            sh "${env.OC} new-project ${params.NAMESPACE}"
+                        } else {
+                            sh "${env.OC} project ${params.NAMESPACE}"
+                        }
+                    }
+                    script {
+                        def adminUsers = params.ADMIN_USERS.trim().split("\\s*,\\s*")
+                        adminUsers.each { adminUser ->
+                            if (adminUser) {
+                                sh "${env.OC} policy add-role-to-user admin ${adminUser} -n \"${params.NAMESPACE}\""
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Clean project') {
+            when {
+                expression { params.CLEAR_NAMESPACE && projectExistsReturnStatus == 0 }
+            }
+            steps {
+                dir(constellationHome) {
+                    echo "Deleting all objects from namespace ${params.NAMESPACE}..."
+                    sh "${env.OC} delete all,${RESOURCES_TO_DELETE} --all"
+                }
+            }
+        }
+
+        stage('Fetch constellation') {
+            steps {
+                dir(constellationHome) {
+                    sh "${insertVersion(env.INSTALLATOR, installatorVersion)} fetch ${params.CONSTELLATION_FILE_PATH ? "--constellation-file ${params.CONSTELLATION_FILE_PATH}" : ''}"
+                }
+            }
+        }
+
+        stage('Retrieve deploy commands') {
+            steps {
+                dir(constellationHome) {
+                    script {
+                        def configSet = params.CONFIG_SET ? "--config-set ${params.CONFIG_SET}" : ''
+                        sh "${insertVersion(env.INSTALLATOR, installatorVersion)} deploy ${configSet} ${params.INSTALLATOR_PARAMETERS}"
+                        // Following variable will be also used in the next stage (no 'def')
+                        deployCommandsFileExists = sh returnStdout: true, script: '''
+                            if [ -f "output/deploy/commands.txt" ]; then
+                                echo -n "true"
+                            fi
+                        '''.stripIndent()
+                        if (deployCommandsFileExists == 'true') {
+                            echo 'Commands that will be executed for deploying constellation:'
+                            sh 'cat output/deploy/commands.txt'
+                        } else {
+                            echo 'Deployment is up to date, no commands will be executed'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy constellation') {
+            when {
+                equals expected: "true", actual: "${deployCommandsFileExists}"
+            }
+            steps {
+                dir(constellationHome) {
+                    script {
+                        // Reference using params.MANUAL_VERIFY does not work on next line (always evaluates to false)
+                        if (MANUAL_VERIFY == "true") {
+                            timeout(time: 1, unit: 'HOURS') {
+                                input message: "Execute deploy commands?", ok: "Yes (run oc commands)"
+                            }
+                        }
+                    }
+                    script {
+                        def lines = readFile('output/deploy/commands.txt').split("\n")
+                        def finalText = ''
+                        for (line in lines) {
+                            finalText = finalText + "./$line\n"
+                        }
+                        writeFile file: 'output/deploy/shell_commands.txt', text: finalText
+                        sh 'cat output/deploy/shell_commands.txt | sh'
+                    }
+                }
+            }
+        }
+
+        stage('Remove everything') {
+            when {
+                expression { params.REMOVE_AGAIN }
+            }
+            steps {
+                dir(constellationHome) {
+                    echo "Remove all deployed objects from namespace ${params.NAMESPACE} again..."
+                    sh "${env.OC} delete all,${RESOURCES_TO_DELETE} --all"
+                }
+            }
+        }
+
+    }
+
+    post {
+        cleanup {
+            script {
+                dir(constellationHome) {
+                    if (fileExists(env.KUBECONFIG)) {
+                        sh "${env.OC} logout"
+                    }
+                }
+            }
+        }
+    }
+}

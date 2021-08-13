@@ -1,0 +1,333 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check required vars for twistlock metrics in Prometheus
+  fail:
+    msg: "twistlock_prometheus_user and twistlock_prometheus_password\
+           vars must be defined and be at minimum 8 chars lenght"
+  when: >
+    ( twistlock_prometheus_user is not defined ) or
+    ( twistlock_prometheus_user | length == 0 ) or
+    ( twistlock_prometheus_password is not defined ) or
+    ( twistlock_prometheus_password | length == 0 )
+
+- name: Get destinatino directory
+  set_fact:
+    destination_dir: "{{ lookup('env','HOME') }}/acpr/{{ os_cluster_name }}/{{ role_name }}"
+
+- name: Store generated credentials
+  set_fact:
+    save_credentials: true
+  when:
+    - twistlock_password is none
+
+- block:
+    - name: Get temporary deployment folder
+      tempfile:
+        state: directory
+        suffix: _twistlock_deployment
+      register: deployment_folder
+
+    - name: Process templates
+      template:
+        src: "{{ item }}"
+        dest: "{{ deployment_folder.path }}/{{ item | basename }}"
+      with_fileglob: "{{ role_path }}/templates/*"
+
+    - name: Login to OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: login
+
+    - name: Apply OpenShift artifacts
+      command: "oc --match-server-version=true apply -n {{ twistlock_namespace }} -f {{ deployment_folder.path }}/"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      changed_when: false
+
+    - name: Get twistlock console installation route
+      command: "oc --match-server-version=true get route twistlock-installation -o jsonpath={.spec.host} -n {{ twistlock_namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: ws_address
+
+    - name: Store route in fact
+      set_fact:
+        ws_address: "{{ ws_address.stdout }}"
+
+    - name: Get twistlock console route
+      command: "oc --match-server-version=true get route twistlock -o jsonpath={.spec.host} -n {{ twistlock_namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: twistlock_address
+
+    - name: Store route in fact
+      set_fact:
+        twistlock_address: "{{ twistlock_address.stdout }}"
+
+    - name: Get twistlock console service IP
+      command: "oc --match-server-version=true get service -n {{ twistlock_namespace }} -o jsonpath={.items[0].spec.clusterIP}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: tw_service_ip
+
+    - name: Store service IP in fact
+      set_fact:
+        tw_service_ip: "{{ tw_service_ip.stdout }}"
+
+    - name: Wait for the Twistlock Console
+      uri:
+        url: "https://{{ ws_address }}/api/v1/_ping"
+        method: GET
+        status_code: 200
+        validate_certs: no
+      register: result
+      until: result.status == 200
+      retries: 120
+      delay: 15
+
+    - block:
+      - name: Set default twistlock user
+        set_fact:
+          twistlock_user: "admin"
+          cachable: false
+        when: twistlock_user is none
+      - block:
+        - name: Install python-passlib dependency
+          yum:
+            name: python-passlib
+            state: present
+        - name: Generate twistlock password
+          set_fact:
+            twistlock_password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+            cachable: false
+        when: twistlock_password is none
+
+    - block:
+        - name: Show password hint
+          debug:
+            msg: "Initial password for Twistlock user '{{ twistlock_user }}' is '{{ twistlock_password }}'"
+
+        - block:
+            - name: Ensure destination exists
+              file:
+                state: directory
+                path: "{{ destination_dir }}"
+            - name: Save credenitals to "{{ destination_dir }}/twistlock_credentials-{{ twistlock_namespace }}.txt"
+              copy:
+                dest: "{{ destination_dir }}/twistlock_credentials-{{ twistlock_namespace }}.txt"
+                content: "{{ twistlock_user }}:{{ twistlock_password }}"
+      when: save_credentials is defined
+
+    - name: Signup to the Twistlock Console
+      uri:
+        url: "https://{{ ws_address }}/api/v1/signup"
+        method: POST
+        body_format: json
+        body:
+          username: "{{ twistlock_user }}"
+          password: "{{ twistlock_password }}"
+        validate_certs: no
+      register: result
+      changed_when: result.status == 200
+      failed_when: result.status not in [200, 400] # Calling this endpoint after the initial sign up has been completed results in a 400 error response.
+
+    - name: Set up Twistlock license
+      uri:
+        url: "https://{{ ws_address }}/api/v1/settings/license"
+        method: POST
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        body:
+          key: "{{ twistlock_license_key }}"
+        validate_certs: no
+      when: twistlock_license_key is not none
+
+    - name: Set up Twistlock compliance rules
+      uri:
+          url: "https://{{ ws_address }}/api/v1/policies/compliance/container"
+          method: PUT
+          body_format: json
+          password: "{{ twistlock_password }}"
+          user: "{{ twistlock_user }}"
+          force_basic_auth: yes
+          body: "{{ lookup('file','{{ role_path }}/files/twistlock_recommended_compliance_rules.json') }}"
+          validate_certs: no
+
+    - name: Set up Twistlock runtime rules
+      uri:
+          url: "https://{{ ws_address }}/api/v1/policies/runtime/container"
+          method: PUT
+          body_format: json
+          password: "{{ twistlock_password }}"
+          user: "{{ twistlock_user }}"
+          force_basic_auth: yes
+          body: "{{ lookup('file','{{ role_path }}/files/twistlock_recommended_runtime_protection.json') }}"
+          validate_certs: no
+
+    - name: Enable Prometheus metrics
+      uri:
+        url: "https://{{ ws_address }}/api/v1/settings/logging"
+        method: POST
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        body:
+          enableMetricsCollection: true
+        validate_certs: no
+
+    - name: Check Prometheus user
+      uri:
+        url: "https://{{ ws_address }}/api/v1/users"
+        method: GET
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        validate_certs: no
+      register: twistlock_users_response
+
+    - name: Parse users
+      set_fact:
+        twistlock_list_all_users: "{{ twistlock_users_response.json | map(attribute='username') | list }}"
+
+    - name: Create Prometheus user
+      uri:
+        url: "https://{{ ws_address }}/api/v1/users"
+        method: POST
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        body:
+          username: "{{ twistlock_prometheus_user }}"
+          password: "{{ twistlock_prometheus_password }}"
+          role: "auditor"
+          authType: "basic"
+          projects: []
+          collections:
+            - "All"
+        validate_certs: no
+      when: twistlock_prometheus_user not in twistlock_list_all_users
+
+    - name: Update Prometheus user
+      uri:
+        url: "https://{{ ws_address }}/api/v1/users"
+        method: PUT
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        body:
+          username: "{{ twistlock_prometheus_user }}"
+          password: "{{ twistlock_prometheus_password }}"
+          role: "auditor"
+          authType: "basic"
+          projects: []
+          collections:
+            - "All"
+        validate_certs: no
+      when: twistlock_prometheus_user in twistlock_list_all_users
+
+
+    - name: Download Twistlock Defender DaemonSet
+      get_url:
+        url: "https://{{ ws_address }}/api/v1/defenders/daemonset.yaml?consoleaddr={{ tw_service_ip }}&namespace={{ twistlock_namespace }}&orchestration=openshift&image=\"{{ twistlock_defender_image }}\"&selinux-enabled"
+        dest: /tmp/defender_daemonset.yml
+        url_password: "{{ twistlock_password }}"
+        url_username: "{{ twistlock_user }}"
+        force: yes
+        force_basic_auth: yes
+        validate_certs: no
+
+    - name: Configure Twistlock Defender DaemonSet
+      lineinfile:
+        path: /tmp/defender_daemonset.yml
+        line: "      nodeSelector:\n        twistlock-defender: \"true\""
+        insertbefore: 'containers:'
+
+    - name: Register Twistlock Defender into the console
+      uri:
+        url: "https://{{ ws_address }}/api/v1/settings/certs"
+        method: POST
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        body:
+          consoleSAN: "[\"127.0.0.1\", \"{{ tw_service_ip }}\", \"{{ twistlock_address }}\"]"
+        validate_certs: no
+
+    - name: Get twistlock tls private key
+      command: "oc --match-server-version=true get secret twistlock-console-tls -o jsonpath=\"{.data.tls\\.key}\" -n {{ twistlock_namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: false
+      changed_when: false
+      register: console_key
+
+    - name: Get twistlock tls certificate
+      command: "oc --match-server-version=true get secret twistlock-console-tls -o jsonpath=\"{.data.tls\\.crt}\" -n {{ twistlock_namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: false
+      changed_when: false
+      register: console_crt
+
+    - name: Configure Twistlock Console SSL
+      uri:
+        url: "https://{{ ws_address }}/api/v1/settings/console-certificate"
+        method: POST
+        body_format: json
+        password: "{{ twistlock_password }}"
+        user: "{{ twistlock_user }}"
+        force_basic_auth: yes
+        body:
+          consoleCustomCert:
+            encrypted: ""
+            plain: "{{ console_crt.stdout | b64decode + console_key.stdout | b64decode }}"
+        validate_certs: no
+
+    - name: Deploy Twistlock Defender
+      command: "oc --match-server-version=true apply -f /tmp/defender_daemonset.yml -n {{ twistlock_namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: false
+      changed_when: false
+
+    - name: Delete installation route
+      command: "oc --match-server-version=true delete route twistlock-installation -n {{ twistlock_namespace }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      failed_when: false
+      changed_when: false
+
+    - name: Include twistlock monitoring install task
+      include_tasks: twistlock-monitoring.yml
+
+  always:
+    - name: Remove temporary
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/defender_daemonset.yml
+        - "{{ deployment_folder.path }}"
+    - name: Logout from OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout

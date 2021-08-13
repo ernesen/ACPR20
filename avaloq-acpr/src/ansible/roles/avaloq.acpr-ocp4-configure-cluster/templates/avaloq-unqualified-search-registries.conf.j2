@@ -1,0 +1,32 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr
+    machineconfiguration.openshift.io/role: {{ item }}
+  name: avaloq-{{ item }}-unqualified-search-registries
+spec:
+  config:
+    ignition:
+      version: 3.1.0
+    storage:
+      files:
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ unqualified_search_registries | b64encode }}
+          verification: {}
+        filesystem: root
+        mode: 420
+        overwrite: true
+        path: /etc/containers/registries.conf.d/avaloq-{{ item }}-unqualified-search-registries.conf
+{% for k, v in acpr_container_images_registries.items() | sort %}
+{% if v['ca_certificate'] is defined %}
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ v['ca_certificate'] | b64encode }}
+          verification: {}
+        filesystem: root
+        mode: 420
+        overwrite: true
+        path: /etc/containers/certs.d/{{ v['host'].split('/')[0] }}.crt
+{% endif %}
+{% endfor %}

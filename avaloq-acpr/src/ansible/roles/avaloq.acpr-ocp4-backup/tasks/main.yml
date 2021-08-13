@@ -1,0 +1,69 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Prepare local system
+  block:
+    - name: Generate UTC timestamp
+      set_fact:
+        timestamp: '{{ lookup("pipe", "date -u +%Y%m%dT%H%MZ") }}'
+
+    - name: Generate local temporary directory names
+      set_fact:
+        _backup_dir: '{{ backup_dir + timestamp }}/'
+
+    - name: Create backup directory
+      file:
+        path: '{{ _backup_dir }}'
+        state: directory
+        recurse: true
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Generate remote temporary directory names
+  set_fact:
+    _temp_backup_dir: '{{ temp_backup_dir + timestamp }}'
+
+- name: Backup etcd configuration and data
+  command: "/usr/local/bin/cluster-backup.sh {{ _temp_backup_dir }}"
+  register: output
+  environment:
+    http_proxy: "{{ acpr_docker_http_proxy | default('') }}"
+    https_proxy: "{{ acpr_docker_https_proxy | default('') }}"
+    no_proxy: "{{ acpr_docker_no_proxy | default('') }}"
+  failed_when: "'snapshot db and kube resources are successfully saved' not in output.stdout"
+  tags:
+    - skip_ansible_lint # ansible-lint E301: This task always needs to be run
+
+- name: Include Sealed secrets Backup
+  import_tasks: sealed_secrets.yml
+  run_once: true
+  delegate_to: localhost
+  become: false
+
+- name: Compress backup
+  archive:
+    path:
+      - '{{ _temp_backup_dir }}'
+    dest: '{{ _temp_backup_dir }}.tgz'
+    format: gz
+
+- name: Fetch backup archives
+  synchronize:
+    src: '{{ _temp_backup_dir }}.tgz'
+    dest: '{{ _backup_dir }}'
+    mode: pull
+
+- name: Include clean up tasks
+  include_tasks: cleanup.yml

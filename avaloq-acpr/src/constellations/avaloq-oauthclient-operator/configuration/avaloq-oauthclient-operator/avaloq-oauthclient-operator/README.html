@@ -1,0 +1,73 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry. Must end with &quot;/&quot;, unless you set it to null.</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_NAMESPACE</td>
+<td>The namespace of the container image. Must end with &quot;/&quot;, unless you set it to an empty value. Example: <code>avaloq/</code></td>
+<td>false</td>
+<td>avaloq/</td>
+</tr>
+<tr>
+<td>OPENSHIFT_NAMESPACE</td>
+<td>OpenShift namespace where to deploy <code>avaloq-oauthclient-operator</code></td>
+<td>false</td>
+<td>acpr-oauthclient-operator</td>
+</tr>
+<tr>
+<td>AVALOQ_OAUTHCLIENT_OPERATOR_REPLICAS</td>
+<td>The number of application replicas.</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_OAUTHCLIENT_OPERATOR_REQUESTS_CPU</td>
+<td>The cpu requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>5m</td>
+</tr>
+<tr>
+<td>AVALOQ_OAUTHCLIENT_OPERATOR_REQUESTS_MEMORY</td>
+<td>The memory requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_OAUTHCLIENT_OPERATOR_LIMITS_CPU</td>
+<td>The cpu limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>2</td>
+</tr>
+<tr>
+<td>AVALOQ_OAUTHCLIENT_OPERATOR_LIMITS_MEMORY</td>
+<td>The memory limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+</tbody>
+</table>

@@ -1,0 +1,50 @@
+{%- macro get_sigstore(v) -%}
+{% if v['sigstore_type'] != "web" %}
+docker:
+     {{ v['host'] }}:
+         sigstore: {{ v['sigstore'] }}
+{% else %}
+docker:
+     {{ v['host'] }}:
+         sigstore: {{ v['sigstore'] | urlsplit('scheme') }}://{% if v['sigstore_username'] is defined and v['sigstore_password'] is defined %}{{ v['sigstore_username'] }}:{{ v['sigstore_password'] }}@{%endif%}{{ v['sigstore'] | urlsplit('hostname') }}{{ v['sigstore'] | urlsplit('path') }}
+{% endif %}
+{%- endmacro -%}
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr
+    machineconfiguration.openshift.io/role: {{ item }}
+  name: avaloq-{{ item }}-registry-trust
+spec:
+  config:
+    ignition:
+      config: {}
+      security:
+        tls: {}
+      timeouts: {}
+      version: 3.1.0
+    networkd: {}
+    passwd: {}
+    storage:
+      files:
+{% for k, v in acpr_container_images_registries.items() | sort %}
+{% if v['sigstore'] is defined %}
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ get_sigstore(v) | b64encode }}
+          verification: {}
+        filesystem: root
+        mode: 420
+        overwrite: true
+        path: /etc/containers/registries.d/{{ v['host'].split('/')[0] }}.yaml
+{% endif %}
+{% endfor %}
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ lookup('template', 'policy.json.j2') | to_nice_json | b64encode }}
+          verification: {}
+        filesystem: root
+        mode: 420
+        overwrite: true
+        path: /etc/containers/policy.json
+  osImageURL: ""

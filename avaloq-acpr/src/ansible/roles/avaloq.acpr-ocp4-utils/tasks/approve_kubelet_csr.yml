@@ -1,0 +1,19 @@
+---
+- name: Get CSRs hostname
+  shell: "set -o pipefail && oc get csr {{ csr }} -o jsonpath={.spec.request}|base64 -d |openssl req -noout -subject |awk -F: '{print $NF}'" # noqa 301 - This task always needs to be run
+  register: csr_nodename
+
+- name: Approve kubelet csr
+  command: "oc adm certificate approve {{ csr }}"
+  environment:
+    KUBECONFIG: "{{ acpr_ocp4_installer_wd }}/auth/kubeconfig"
+  when:
+    - csr_nodename.stdout is defined
+
+- name: Remove new host from missing_cluster_nodes
+  set_fact:
+    missing_cluster_nodes: '{{ missing_cluster_nodes|difference(csr_nodename.stdout_lines) }}'
+
+- name: Show updated missing_cluster_nodes
+  debug:
+    msg: "missing_cluster_nodes: {{ missing_cluster_nodes }}"

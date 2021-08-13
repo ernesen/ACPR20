@@ -1,0 +1,11 @@
+
+### Eclipse ###
+.project
+
+### Intellij ###
+.idea/
+out/
+*.iml
+
+### VisualStudioCode ###
+.vscode/

@@ -1,0 +1,25 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+node_config_file: /etc/origin/node/node-config.yaml
+kubelet_streaming_timeout: false
+master_config_file: /etc/origin/master/master-config.yaml
+master_env_file: /etc/origin/master/master.env
+master_encryption_config: /etc/origin/master/encryption-config.yaml
+api_always_pull_images: false
+api_enable_ratelimit: false
+api_security_context_deny: false
+api_request_timeout: false
+controller_rotate_kubelet_certificates: false
+controller_pod_gc_threshold: false

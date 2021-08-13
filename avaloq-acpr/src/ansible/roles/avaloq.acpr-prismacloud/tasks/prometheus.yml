@@ -1,0 +1,78 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Enable Prometheus metrics
+  uri:
+    url: "https://{{ twistlock_address }}/api/v1/settings/logging"
+    method: POST
+    body_format: json
+    password: "{{ idx.value.console.password }}"
+    user: "{{ idx.value.console.username }}"
+    force_basic_auth: yes
+    body:
+      enableMetricsCollection: true
+    validate_certs: no
+
+- name: Check Prometheus user
+  uri:
+    url: "https://{{ twistlock_address }}/api/v1/users"
+    method: GET
+    body_format: json
+    password: "{{ idx.value.console.password }}"
+    user: "{{ idx.value.console.username }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: twistlock_users_response
+
+- name: Parse users
+  set_fact:
+    twistlock_list_all_users: "{{ twistlock_users_response.json | map(attribute='username') | list }}"
+
+- name: Create Prometheus user
+  uri:
+    url: "https://{{ twistlock_address }}/api/v1/users"
+    method: POST
+    body_format: json
+    password: "{{ idx.value.console.password }}"
+    user: "{{ idx.value.console.username }}"
+    force_basic_auth: yes
+    body:
+      username: "{{ idx.value.console.prometheus.username }}"
+      password: "{{ idx.value.console.prometheus.password }}"
+      role: "auditor"
+      authType: "basic"
+      projects: []
+      collections:
+        - "All"
+    validate_certs: no
+  when: idx.value.console.prometheus.username not in twistlock_list_all_users
+
+- name: Update Prometheus user
+  uri:
+    url: "https://{{ twistlock_address }}/api/v1/users"
+    method: PUT
+    body_format: json
+    password: "{{ idx.value.console.password }}"
+    user: "{{ idx.value.console.username }}"
+    force_basic_auth: yes
+    body:
+      username: "{{ idx.value.console.prometheus.username }}"
+      password: "{{ idx.value.console.prometheus.password }}"
+      role: "auditor"
+      authType: "basic"
+      projects: []
+      collections:
+        - "All"
+    validate_certs: no
+  when: idx.value.console.prometheus.username in twistlock_list_all_users

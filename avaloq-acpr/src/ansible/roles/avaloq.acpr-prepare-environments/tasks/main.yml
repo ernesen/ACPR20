@@ -1,0 +1,76 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: gather service facts
+  service_facts:
+
+- name: check RHEL version
+  assert:
+    that:
+      - '{{ rhel_min_release }} <= {{ ansible_distribution_version }}'
+
+- name: extract openshift version
+  set_fact:
+    cust_os_version: "{{ hostvars[groups['OSEv3'][0]]['openshift_image_tag']|regex_replace('^v') }}"
+
+- name: fail if minimum kernel version for ocp 3.11.146+ is not meet
+  fail:
+    msg: 'OpenShift {{ cust_os_version }} requires kernel {{ acpr_prepare_minimum_kernel_version[ansible_facts.distribution_version] }} or newer'
+  when:
+    - cust_os_version is version('3.11.146', '>=')
+    - ansible_facts.distribution_version in acpr_prepare_minimum_kernel_version
+    - ansible_facts.kernel is version_compare(acpr_prepare_minimum_kernel_version[ansible_facts.distribution_version], '<')
+
+- name: install required environment packages
+  yum:
+    name:
+      - yum-utils
+      - libsemanage-python
+    state: present
+
+- name: run needs restarting
+  command: /bin/needs-restarting -r
+  register: needs_restarting
+  check_mode: no
+  changed_when: false
+
+- name: check if reboot is required
+  assert:
+    that:
+      - '{{ needs_restarting.rc }} == 0'
+    msg: Please reboot your system to finish the update
+
+- name: include network checks
+  include_tasks: network.yml
+
+- name: include selinux checks
+  include_tasks: selinux.yml
+
+- name: include dns checks
+  include_tasks: dns.yml
+
+- name: include ldap checks
+  include_tasks: ldap.yml
+  when:
+    - openshift_master_identity_providers | selectattr('kind','search','LDAPPasswordIdentityProvider') | list | count > 0
+    - "'masters' in group_names"
+
+- name: include ntp checks
+  include_tasks: ntp.yml
+
+- name: include certificate management
+  include_tasks: certificates.yml
+
+- name: include sysctl configuration
+  include_tasks: sysctl.yml

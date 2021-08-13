@@ -1,0 +1,310 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+
+  ### Route
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      name: grafana
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+{% if acpr_monitoring_grafana_hostname is defined %}
+      host: {{ acpr_monitoring_grafana_hostname }}
+{% endif %}
+      port:
+        targetPort: prometheus
+      tls:
+        destinationCACertificate: "-----BEGIN COMMENT-----\nThis is an empty PEM file
+        created to provide backwards compatibility\nfor reencrypt routes that have no
+        destinationCACertificate. This \ncontent will only appear for routes accessed
+        via /oapi/v1/routes.\n-----END COMMENT-----\n"
+        insecureEdgeTerminationPolicy: Redirect
+        termination: reencrypt
+      to:
+        kind: Service
+        name: grafana
+        weight: 100
+      wildcardPolicy: None
+
+  ### ServiceAccount
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: grafana
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      annotations:
+        serviceaccounts.openshift.io/oauth-redirectreference.grafana: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"grafana"}}'
+
+  ### PersistentVolumeClaim
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: grafana-log-pvc
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ acpr_monitoring_grafana_pvc_size_request_log }}
+{% if acpr_monitoring_grafana_pvc_storage_class_name_log is defined %}
+      storageClassName: {{ acpr_monitoring_grafana_pvc_storage_class_name_log }}
+{% endif %}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: grafana-lib-pvc
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ acpr_monitoring_grafana_pvc_size_request_library }}
+{% if acpr_monitoring_grafana_pvc_storage_class_name_library is defined %}
+      storageClassName: {{ acpr_monitoring_grafana_pvc_storage_class_name_library }}
+{% endif %}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: grafana-dashboards-volume
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      accessModes:
+        - ReadWriteMany
+      resources:
+        requests:
+          storage: {{ acpr_monitoring_grafana_pvc_size_request_dashboard }}
+{% if acpr_monitoring_grafana_pvc_storage_class_name_dashboard is defined %}
+      storageClassName: {{ acpr_monitoring_grafana_pvc_storage_class_name_dashboard }}
+{% endif %}
+  ### ClusterRoleBinding
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: grafana-acpr-monitoring-cluster-reader
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-reader
+    subjects:
+      - kind: ServiceAccount
+        name: grafana
+        namespace: {{ namespace }}
+
+  ### NetworkPolicy
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: grafana
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      ingress:
+        - ports:
+            - port: 3000
+              protocol: TCP
+          from:
+            - namespaceSelector:
+                matchLabels:
+                  network.openshift.io/policy-group: ingress
+      podSelector:
+        matchLabels:
+          app: grafana
+
+  ### Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: grafana
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      name: grafana
+      annotations:
+        service.alpha.openshift.io/serving-cert-secret-name: grafana-tls
+    spec:
+      ports:
+        - name: prometheus
+          port: 3000
+          protocol: TCP
+          targetPort: 3000
+      selector:
+        app: grafana
+      sessionAffinity: None
+      type: ClusterIP
+
+  ### Deployment
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app: grafana
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+        avaloq.com/zone: core-internal
+      name: grafana
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: grafana
+      template:
+        metadata:
+          labels:
+            app: grafana
+            avaloq.com/app: acpr-monitoring
+            app.kubernetes.io/component: monitoring
+          name: grafana
+        spec:
+          containers:
+            - image: {{ acpr_grafana_dashboard_image }}
+              imagePullPolicy: IfNotPresent
+              name: grafana
+              args:
+                - '-config=/etc/grafana/grafana.ini'
+              ports:
+                - containerPort: 3000
+                  name: web
+                  protocol: TCP
+{% if acpr_monitoring_grafana_resources_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_grafana_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_grafana_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_grafana_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_grafana_resources_request_memory }}
+{% endif %}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+                - mountPath: /etc/grafana
+                  name: grafana-etc-volume
+                - mountPath: /var/lib/grafana
+                  name: grafana-lib-volume
+                - mountPath: /var/log/grafana
+                  name: grafana-log-volume
+                - mountPath: /etc/grafana/provisioning/datasources
+                  name: grafana-provisioning-datasource
+                - mountPath: /etc/grafana/provisioning/dashboards
+                  name: grafana-provisioning-dashboards
+                - mountPath: /etc/grafana/dashboards
+                  name: grafana-dashboards
+            - args:
+                - '-provider=openshift'
+                - '-https-address=:3000'
+                - '-http-address='
+                - '-email-domain=*'
+                - '-upstream=http://localhost:3001'
+                #- '-openshift-sar={"resource": "namespaces", "verb": "get"}'
+                #- '-openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get"}}'
+                - '-tls-cert=/etc/tls/private/tls.crt'
+                - '-tls-key=/etc/tls/private/tls.key'
+                - '-client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token'
+                - '-cookie-secret-file=/etc/proxy/secrets/session_secret'
+                - '-openshift-service-account=grafana'
+                - '-openshift-ca=/etc/pki/tls/cert.pem'
+                - '-openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+                - '-skip-auth-regex=^/api/health'
+                - '-skip-auth-regex=^/metrics'
+                - '-cookie-expire=4h'
+              image: {{ acpr_monitoring_oauth_proxy_image }}
+              imagePullPolicy: IfNotPresent
+              name: grafana-proxy
+              ports:
+                - containerPort: 3000
+                  name: https
+                  protocol: TCP
+{% if acpr_monitoring_grafana_proxy_resources_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_grafana_proxy_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_grafana_proxy_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_grafana_proxy_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_grafana_proxy_resources_request_memory }}
+{% endif %}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              volumeMounts:
+                - mountPath: /etc/tls/private
+                  name: secret-grafana-tls
+                - mountPath: /etc/proxy/secrets
+                  name: secret-grafana-proxy
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccount: grafana
+          serviceAccountName: grafana
+          terminationGracePeriodSeconds: 30
+          nodeSelector:
+{% if acpr_monitoring_grafana_node_selector is defined %}
+            kubernetes.io/hostname: {{ acpr_monitoring_grafana_node_selector }}
+{% else %}
+            node-role.kubernetes.io/compute: "true"
+{% endif %}
+          volumes:
+            - configMap:
+                defaultMode: 420
+                name: grafana
+              name: grafana-etc-volume
+            - name: grafana-lib-volume
+              persistentVolumeClaim:
+                claimName: {{ acpr_monitoring_grafana_persistent_volume_claim }}
+            - name: grafana-log-volume
+              persistentVolumeClaim:
+                claimName: grafana-log-pvc
+            - secret:
+                defaultMode: 420
+                secretName: grafana-provisioning-datasource
+              name: grafana-provisioning-datasource
+            - configMap:
+                defaultMode: 420
+                name: grafana-provisioning-dashboards
+              name: grafana-provisioning-dashboards
+            - name: grafana-dashboards
+              persistentVolumeClaim:
+                claimName: grafana-dashboards-volume
+            - name: secret-grafana-tls
+              secret:
+                defaultMode: 420
+                secretName: grafana-tls
+            - name: secret-grafana-proxy
+              secret:
+                defaultMode: 420
+                secretName: grafana-proxy
+      updateStrategy:
+        type: OnDelete
+    status:
+      replicas: 0

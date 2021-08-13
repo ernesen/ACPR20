@@ -1,0 +1,18 @@
+# "{{ ansible_managed }}"
+# /etc/sysconfig/docker
+
+# Modify these options if you want to change the way the docker daemon runs
+OPTIONS='{% if acpr_docker_expose %}}-H unix:///var/run/docker.sock -H tcp://0.0.0.0:{{ acpr_docker_tcp_port }}{% endif %} --selinux-enabled --log-driver=json-file --log-opt max-size=10M --log-opt max-file=1 --signature-verification={{ acpr_docker_signature_verification }}'
+if [ -z "${DOCKER_CERT_PATH}" ]; then
+    DOCKER_CERT_PATH=/etc/docker
+fi
+
+# Do not add registries in this file anymore. Use /etc/containers/registries.conf
+# from the atomic-registries package.
+#
+
+# docker-latest daemon can be used by starting the docker-latest unitfile.
+# To use docker-latest client, uncomment below lines
+HTTP_PROXY='{{ acpr_docker_http_proxy }}'
+HTTPS_PROXY='{{ acpr_docker_https_proxy }}'
+NO_PROXY='{{ acpr_docker_no_proxy }}'

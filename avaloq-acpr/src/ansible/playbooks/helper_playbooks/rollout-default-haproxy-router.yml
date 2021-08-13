@@ -1,0 +1,48 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: ACPR | Rollout default haproxy router
+  hosts: localhost
+  become: false
+  pre_tasks:
+    - name: Generate kubeconf path
+      set_fact:
+        KUBECONFIG: '/tmp/acpr-kube-{{ 10000000|random }}/config'
+    - name: Create kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        mode: 0700
+        state: directory
+  post_tasks:
+    - name: Cleanup kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        state: absent
+  tasks:
+    - name: acpr login
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: login.yml
+
+    - name: Rollout dc router
+      command: "oc --match-server-version=true -n default rollout latest dc/router"
+      environment:
+          KUBECONFIG: '{{ KUBECONFIG }}'
+      register: output
+      changed_when: '"deploymentconfig.apps.openshift.io/router rolled out" in output.stdout'
+
+    - name: acpr logout
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout.yml

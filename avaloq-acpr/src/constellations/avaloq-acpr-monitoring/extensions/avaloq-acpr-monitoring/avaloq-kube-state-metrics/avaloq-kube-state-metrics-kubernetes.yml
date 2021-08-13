@@ -1,0 +1,318 @@
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: OPENSHIFT_VERSION
+    validation:
+      required: true
+      type: number
+      range:
+        min: 3
+        max: 4
+    description: OpenShift version where this constellation is deployed to. Valid
+      values are 3 or 4.
+    value: 4
+  - name: OPENSHIFT_NAMESPACE
+    validation:
+      type: text
+      required: true
+    description: The namespace used on Openshift where this constellation is deployed
+      to.
+    value: acpr-monitoring
+  - name: AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY
+    validation:
+      type: text
+      required: false
+    value: registry.service.avaloq.com/
+    description: |
+      URL of the container image registry containing the Red Hat images. Must end with "/", unless you set it to null
+  - name: AVALOQ_CONTAINER_IMAGE_REGISTRY
+    validation:
+      required: false
+      type: text
+    value: registry.service.avaloq.com/
+    description: URL of the container image registry. Must end with "/", unless you
+      set it to null
+  - name: AVALOQ_KUBE_STATE_METRICS_CONTAINER_IMAGE_PULL_POLICY
+    value: IfNotPresent
+    validation:
+      required: false
+      type: text
+      pattern: ^(IfNotPresent)|(Always)$
+    description: |
+      The pull policy to use for the container image. Valid values are `IfNotPresent` and `Always`, default is `IfNotPresent`.
+  - name: AVALOQ_KUBE_STATE_METRICS_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: openshift3/ose-kube-state-metrics:v3.11.465
+    description: Container image of kube-state-metrics
+  - name: AVALOQ_KUBE_STATE_METRICS_REPLICAS
+    validation:
+      type: number
+      required: false
+      range:
+        min: 0
+    value: 1
+    description: Number of replicas of kube-state-metrics deployment
+  - name: AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 1024m
+    description: kube-state-metrics memory request
+  - name: AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 2048Mi
+    description: kube-state-metrics memory limit
+  - name: AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 2048Mi
+    description: kube-state-metrics memory request
+  - name: AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 1024m
+    description: kube-state-metrics CPU limit
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-deploy-on-openshift4
+    when:
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 4
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: kube-state-metrics-resources
+    when:
+      matching:
+        kind: Deployment
+        metadata.name: kube-state-metrics
+    then:
+    - action: apply
+      script: |
+        def processResource(containerName, kind, type) {
+          containers = $.spec.template.spec.containers;
+          for (int i = 0; i < containers.size(); i++) {
+            if (containers[i].name == containerName ) {
+              containers[i].resources[kind].remove(type);
+            }
+          }
+        }
+
+        if ('${AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_CPU}' == '') {
+          processResource('kube-state-metrics', 'limits', 'cpu');
+        }
+
+        if ('${AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_MEMORY}' == '') {
+          processResource('kube-state-metrics', 'limits', 'memory');
+        }
+
+        if ('${AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_CPU}' == '') {
+          processResource('kube-state-metrics', 'requests', 'cpu');
+        }
+
+        if ('${AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_MEMORY}' == '') {
+          processResource('kube-state-metrics', 'requests', 'memory');
+        }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics
+  labels:
+    avaloq.com/app: kube-state-metrics
+    app.kubernetes.io/component: monitoring
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - nodes
+  - pods
+  - services
+  - resourcequotas
+  - replicationcontrollers
+  - limitranges
+  - persistentvolumeclaims
+  - persistentvolumes
+  - namespaces
+  - endpoints
+  - configmaps
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics
+  labels:
+    avaloq.com/app: kube-state-metrics
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: ${OPENSHIFT_NAMESPACE}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  labels:
+    app.kubernetes.io/component: monitoring
+    avaloq.com/app: kube-state-metrics
+    avaloq.com/zone: core-internal
+spec:
+  selector:
+    matchLabels:
+      avaloq.com/app: kube-state-metrics
+  replicas: ${AVALOQ_KUBE_STATE_METRICS_REPLICAS}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: '8080'
+        prometheus.io/scheme: http
+        prometheus.io/scrape: 'true'
+      labels:
+        app.kubernetes.io/component: monitoring
+        avaloq.com/app: kube-state-metrics
+        avaloq.com/zone: core-internal
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+      - name: kube-state-metrics
+        image: ${AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY}${AVALOQ_KUBE_STATE_METRICS_CONTAINER_IMAGE}
+        imagePullPolicy: ${AVALOQ_KUBE_STATE_METRICS_CONTAINER_IMAGE_PULL_POLICY}
+        args:
+        - --host=0.0.0.0
+        - --port=8080
+        - --telemetry-host=127.0.0.1
+        - --telemetry-port=8081
+        ports:
+        - name: http-metrics
+          containerPort: 8080
+        - name: telemetry
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: ${AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_KUBE_STATE_METRICS_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_KUBE_STATE_METRICS_RESOURCES_REQUEST_MEMORY}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: volume-directive-shadow
+      volumes:
+      - emptyDir: {}
+        name: volume-directive-shadow
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-kubestatemetrics
+  labels:
+    avaloq.com/app: kube-state-metrics
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 8080
+      protocol: TCP
+    from:
+    - podSelector:
+        matchLabels:
+          avaloq.com/app: prometheus
+  podSelector:
+    matchLabels:
+      avaloq.com/app: kube-state-metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  labels:
+    avaloq.com/app: kube-state-metrics
+    app.kubernetes.io/component: monitoring
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    targetPort: http-metrics
+    protocol: TCP
+  - name: telemetry
+    port: 8081
+    targetPort: telemetry
+    protocol: TCP
+  selector:
+    avaloq.com/app: kube-state-metrics
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+  labels:
+    avaloq.com/app: kube-state-metrics
+    app.kubernetes.io/component: monitoring

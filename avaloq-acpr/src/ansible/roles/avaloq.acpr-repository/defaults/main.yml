@@ -1,0 +1,39 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+acpr_rpm_gpgcheck: yes
+acpr_rpm_gpgkey: 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release'
+#acpr_rpm_proxy
+#acpr_rpm_proxy_username
+#acpr_rpm_proxy_password
+#acpr_rpm_sslcacert
+acpr_rpm_sslverify: yes
+#acpr_rpm_sslcacert: /path/to/CA.bundle
+acpr_rpm_repository_defaults:
+  AcprOpenShift311:
+    description: ACPR Red Hat OpenShift Container Platform 3.11 (RPMs)
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-ose-3.11
+  AcprRhel7Server:
+    description: ACPR Red Hat Enterprise Linux 7 Server (RPMs)
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server
+  AcprRhel7ServerExtras:
+    description: ACPR Red Hat Enterprise Linux 7 Server - Extras (RPMs)
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-extras
+  AcprRhel7Ansible29:
+    description: ACPR Red Hat Ansible Engine 2.9 (RPMs) for RHEL7
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-ansible-2.9
+  AcprTools:
+    description: ACPR Tools for Red Hat OpenShift Container Platform (RPMS) for RHEL 7
+    url: https://repository.service.avaloq.com/rpm/acpr-rhel-7-tools
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-acpr

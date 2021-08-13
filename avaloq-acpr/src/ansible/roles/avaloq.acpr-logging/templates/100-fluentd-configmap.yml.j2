@@ -1,0 +1,137 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logging-fluentd
+  namespace: openshift-logging
+data:
+  fluent.conf: |
+    # This file is the fluentd configuration entrypoint. Edit with care.
+
+    @include configs.d/openshift/system.conf
+
+    # In each section below, pre- and post- includes don't include anything initially;
+    # they exist to enable future additions to openshift conf as needed.
+
+    ## sources
+    ## ordered so that syslog always runs last...
+    @include configs.d/openshift/input-pre-*.conf
+    @include configs.d/dynamic/input-docker-*.conf
+    @include configs.d/dynamic/input-syslog-*.conf
+    @include configs.d/openshift/input-post-*.conf
+    @include configs.d/user/input-auditlog.conf
+    ##
+
+    <label @INGRESS>
+    ## filters
+      @include configs.d/openshift/filter-pre-*.conf
+      @include configs.d/openshift/filter-retag-journal.conf
+      @include configs.d/openshift/filter-k8s-meta.conf
+      @include configs.d/openshift/filter-kibana-transform.conf
+      @include configs.d/openshift/filter-k8s-flatten-hash.conf
+      @include configs.d/openshift/filter-k8s-record-transform.conf
+      @include configs.d/openshift/filter-syslog-record-transform.conf
+      @include configs.d/openshift/filter-viaq-data-model.conf
+      @include configs.d/openshift/filter-post-*.conf
+    ##
+    </label>
+
+    <label @OUTPUT>
+    ## matches
+      @include configs.d/openshift/output-pre-*.conf
+      @include configs.d/openshift/output-operations.conf
+      @include configs.d/openshift/output-applications.conf
+      # no post - applications.conf matches everything left
+    ##
+    </label>
+  input-auditlog.conf: |
+    <source>
+      @type tail
+      path /var/lib/origin/audit/audit-ocp.log
+      pos_file /var/lib/origin/audit/audit-ocp.pos
+      time_format %Y-%m-%dT%H:%M:%S
+      tag auditlog.requests
+      format json
+    </source>
+
+    <filter auditlog**>
+      @type record_transformer
+      enable_ruby
+      <record>
+        @timestamp ${record['@timestamp'].nil? ? Time.at(time).getutc.to_datetime.rfc3339(6) : Time.parse(record['@timestamp']).getutc.to_datetime.rfc3339(6)}
+      </record>
+    </filter>
+
+    <match auditlog**>
+      @type copy
+      <store>
+        @type elasticsearch_dynamic
+        log_level debug
+        host "#{ENV['OPS_HOST']}"
+        port "#{ENV['OPS_PORT']}"
+        scheme https
+        index_name auditlog.${record['@timestamp'].nil? ? Time.at(time).getutc.strftime(@logstash_dateformat) : Time.parse(record['@timestamp']).getutc.strftime(@logstash_dateformat)}
+
+        user fluentd
+        password changeme
+
+        client_key "#{ENV['OPS_CLIENT_KEY']}"
+        client_cert "#{ENV['OPS_CLIENT_CERT']}"
+        ca_file "#{ENV['OPS_CA']}"
+
+        type_name com.redhat.ocp.auditlog
+
+        # there is currently a bug in the es plugin + excon - cannot
+        # recreate/reload connections
+        reload_connections false
+        reload_on_failure false
+        flush_interval 5s
+        max_retry_wait 300
+        disable_retry_limit true
+        buffer_queue_limit "#{ENV['BUFFER_QUEUE_LIMIT'] || '1024' }"
+        buffer_chunk_limit "#{ENV['BUFFER_SIZE_LIMIT'] || '1m' }"
+        # the systemd journald 0.0.8 input plugin will just throw away records if the buffer
+        # queue limit is hit - 'block' will halt further reads and keep retrying to flush the
+        # buffer to the remote - default is 'exception' because in_tail handles that case
+        buffer_queue_full_action "#{ENV['BUFFER_QUEUE_FULL_ACTION'] || 'exception'}"
+      </store>
+    </match>
+  throttle-config.yaml: |
+    # Copyright 2019 Avaloq Evolution AG
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    # https://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    # Logging example fluentd throttling config file
+
+    #example-project:
+    #  read_lines_limit: 10
+    #
+    #.operations:
+    #  read_lines_limit: 100
+{% if acpr_logging_fluentd_secure_forward is defined and acpr_logging_fluentd_secure_forward is not none%}
+  secure-forward.conf: |
+{{ acpr_logging_fluentd_secure_forward|indent(width=4,indentfirst=True) }}
+{% endif %}

@@ -1,0 +1,40 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+name: "acpr.oauthclient-operator_namespace_exists"
+description: "OpenShift namespace `acpr-oauthclient-operator` exists"
+source: acpr
+exec:
+  type: TEXT
+  commands:
+    - ${I8R_CLIENT} get namespaces -o name acpr-oauthclient-operator
+condition: |-
+  $.trim() == 'namespace/acpr-oauthclient-operator'
+
+---
+name: "acpr.oauthclient-operator_avaloq-oauthclient-operator_exists"
+description: "At least one OpenShift pod of `Avaloq OAuth Operator ` exists"
+source: acpr
+exec:
+  type: TEXT
+  commands:
+    - ${I8R_CLIENT} get pods -n acpr-oauthclient-operator -l app=avaloq-oauthclient-operator -o name
+condition: |-
+  foreach (it : $.split('\n')) {
+    pit = it.trim();
+    if (pit.length() > 0 && ! pit.contains('pod/avaloq-oauthclient-operator')) {
+      return false;
+    }
+  }
+  true;

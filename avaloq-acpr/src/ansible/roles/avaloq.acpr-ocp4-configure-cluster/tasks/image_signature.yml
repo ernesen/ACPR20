@@ -1,0 +1,37 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Format 'acpr_pull_secret' variable
+  no_log: true
+  set_fact:
+    acpr_pull_secret: "{{ acpr_pull_secret | default({}) }}"
+
+- name: Put proper container registries hosts to 'pull_secret_registries' variable
+  set_fact:
+    pull_secret_registries: "{{ lookup('dict', acpr_pull_secret.auths | default({}), wantlist=True) | map(attribute='key') | list | difference(lookup('dict', acpr_container_images_registries, wantlist=True) | map(attribute='value.host') | list) }}"
+
+- name: Filter out registry duplicates
+  set_fact:
+    registries: "{{ pull_secret_registries|unique }}"
+
+- name: Apply 'avaloq-registry-trust.yml.j2' MachineConfig file
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    definition: "{{ lookup('template', 'avaloq-registry-trust.yml.j2') }}"
+  loop:
+    - master
+    - worker

@@ -1,0 +1,51 @@
+#!/bin/bash
+
+##################################################
+## Copyright 2019 Avaloq Evolution AG
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## https://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##################################################
+
+hostdir_path="{{ acpr_logging_hostpath_dir }}"
+{% raw %}
+set -e
+
+oc project openshift-logging
+echo "Scaling down fluentd ..."
+oc patch ds logging-fluentd -p '{"spec":{"template":{"spec":{"nodeSelector":{"logging-infra-fluentd":"false"}}}}}'
+
+for component in es es-ops; do
+    i=0
+    for dc in $(oc get dc -l component=$component -o name); do
+        echo "Cancel rollout to prevent deployment from breaking"
+        oc rollout cancel $dc ; sleep 2
+
+        echo "Scaling down elasticsearch ($component) ..."
+        oc scale --replicas=0 $dc ; sleep 2
+    
+        echo "Updating deyplomentconfig ($component) ..."
+        label="logging-${component}-node-${i}"
+        oc patch $dc -p '{"spec":{"template":{"spec":{"nodeSelector":{"'${label}'":"true"}}}}}'
+        oc patch $dc -p '{"spec":{"template":{"spec":{"containers":[{"name":"elasticsearch","securityContext":{"privileged": true}}]}}}}'
+        oc set volume $dc --add --overwrite --name=elasticsearch-storage --type=hostPath --path=${hostdir_path}/${label}
+        i=$(($i+1))
+        
+        echo "Scaling up elasticsearch ($component) ..."
+        oc rollout latest $dc
+        oc scale --replicas=1 $dc
+    done
+done
+
+echo "Scaling up fluentd ..."
+oc patch ds logging-fluentd -p '{"spec":{"template":{"spec":{"nodeSelector":{"logging-infra-fluentd":"true"}}}}}'
+{% endraw %}

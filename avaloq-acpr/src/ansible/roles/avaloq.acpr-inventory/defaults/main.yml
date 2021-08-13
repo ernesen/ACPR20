@@ -1,0 +1,90 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+# Defaults file for avaloq.os-inventory
+# Refer to 'Install Avaloq Container Platform' - 'ACPR OpenShift configuration
+# and installation' documentation topic for further parameters and more information
+
+# Following variable should not be set other than 'false' (i.e. no override)
+# Exceptionally, and in agreement with Avaloq, an override for an
+# ACPR unsupported OpenShift version may be set in order not to make
+# the compatibility check fail.
+allow_unsupported_os_version: false
+cust_invt_file: '{{ playbook_dir }}/../inventory/ansible-hosts'
+cust_no_proxy: localhost,127.0.0.1,.local
+cust_ansible_ssh_user: ansible
+
+# Avaloq Container Platform Reference defaults - cannot be overwritten
+avq_os_type: openshift-enterprise
+avq_invt_tmpl_f: acpr-cluster.yml_{{ avq_os_release }}.j2
+avq_acpr_home: '{{ ansible_env.HOME }}/acpr/'
+acpr_version: 5.7.0
+cust_redhat_disconnected: true
+cust_os_channel: stable
+cust_cluster:
+  provider: openshift
+
+cust_clus_net_cidr: '10.128.0.0/16'
+cust_clus_portal_cidr: '172.30.0.0/16'
+cust_clus_subnet_length: '9'
+
+cust_router_selector: 'node-role.kubernetes.io/infra=true'
+
+cust_masterapi_enable_audit: true
+cust_masterapi_audit_retention_days: 14
+cust_masterapi_audit_retention_files: 5
+cust_masterapi_audit_max_filesize: 500
+
+cust_logging_es_cpu_request: 300m
+cust_logging_es_cpu_limit: 500m
+cust_logging_es_memory_limit: 16Gi
+cust_logging_es_ops_cpu_request: 300m
+cust_logging_es_ops_cpu_limit: 500m
+cust_logging_es_ops_memory_limit: 8Gi
+cust_logging_nodeselector: '{"node-role.kubernetes.io/infra": "true"}'
+
+cust_container_images_signature_verification: true
+
+cust_acpr_rpm_repositories:
+  AcprOpenShift311:
+    description: ACPR Red Hat OpenShift Container Platform 3.11 (RPMs)
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-ose-3.11
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+  AcprRhel7Server:
+    description: ACPR Red Hat Enterprise Linux 7 Server (RPMs)
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+  AcprRhel7ServerExtras:
+    description: ACPR Red Hat Enterprise Linux 7 Server - Extras (RPMs)
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-extras
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+  AcprRhel7Ansible29:
+    description: Red Hat Ansible Engine 2.9 (RPMs) for RHEL7
+    url: https://repository.service.avaloq.com/rpm/rh-rhel-7-server-ansible-2.9
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+  AcprTools:
+    description: ACPR Tools for Red Hat OpenShift Container Platform (RPMS) for RHEL 7
+    url: https://repository.service.avaloq.com/rpm/acpr-rhel-7-tools
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-acpr
+
+#Glusterfs
+cust_storage_glusterfs:
+  namespace: acpr-glusterfs
+  storageclass: true
+  storageclass_default: false
+  block_deploy: true
+  block_storageclass: true
+  block_storageclass_default: false
+  block_host_vol_size: 10
+  wipe_devices: false

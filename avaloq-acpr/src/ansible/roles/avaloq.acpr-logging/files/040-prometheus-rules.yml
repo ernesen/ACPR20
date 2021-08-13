@@ -1,0 +1,188 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-logging
+  labels:
+    acpr.avaloq.com/kind: prometheus-rules
+    rule-type: infrastructure
+  name: logging-prometheus-rules
+data:
+  elasticsearch.rules: |
+    groups:
+      - name: elasticsearch-rules
+        rules:
+        - alert: ElasticSearchHealthyNodes [PAM34]
+          expr: es_cluster_datanodes_number{kubernetes_namespace="openshift-logging"} < 3
+          for: 5m
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            message: "Number of Healthy Elasticsearch data nodes less than 3"
+            description: "Number Healthy data nodes in elasticsearch cluster {{ $labels.cluster }} is {{ $value }}"
+        - alert: ElasticSearchNoSpaceWithin24h [PAM35]
+          expr: predict_linear(es_fs_path_free_bytes{kubernetes_namespace="openshift-logging"}[1h], 24 * 3600) < 0
+          for: 10m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            description: Elasticsearch reports that space on {{ $labels.es_node }}({{ $labels.instance }})
+              will run within 24h. Please check disk usage on that host
+            message: Elasticsearch {{ $labels.es_node }} will be out of disk space within 24h
+        - alert: ElasticSearchNoSpaceAvailable [PAM36]
+          expr: es_fs_path_available_bytes{kubernetes_namespace="openshift-logging"} * 100 / es_fs_path_total_bytes{kubernetes_namespace="openshift-logging"} < 10
+          for: 10m
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            description: Node {{ $labels.es_node }} ({{ $labels.instance }}) in cluster {{ $labels.cluster }}
+              has only {{ $value }}% left space on device. Please check disk usage.
+            message: Less than 10% space available on  {{$labels.es_node}}
+        - alert: ElasticSearchIngestionFailed [PAM37]
+          expr: delta(es_ingest_total_failed_count{kubernetes_namespace="openshift-logging"}[1m]) > 0
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            description: Node {{ $labels.es_node }} in cluster {{ $labels.cluster }} reports failed ingestions.
+              Some documents were lost.
+            message: Node {{$labels.es_node}} ingestion failed
+        - alert: ElasticSearchPendingTPendingTasks [PAM38]
+          expr: es_cluster_pending_tasks_number{kubernetes_namespace="openshift-logging"} > 0
+          for: 30m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            message: "Number of pending tasks on {{ $labels.cluster }}"
+            description: "There are {{ $value }} tasks pending for 30 min on {{ $labels.es_node }}. Cluster {{ $labels.cluster }} works slowly."
+        - alert: ElasticSearchActiveShards [PAM39]
+          expr: 100 - es_cluster_shards_active_percent{kubernetes_namespace="openshift-logging"} > 0
+          for: 10m
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            description: Some shards ({{$value}}%) are inactive on {{$labels.cluster}}
+              for more than 10 minutes. Results from those shards are unavailable in returned
+              results.
+            message: Non-active shards on {{$labels.cluster}}
+        - alert: ElasticSearchUnassignedShards [PAM40]
+          expr: es_cluster_shards_number{kubernetes_namespace="openshift-logging",type="unassigned"} > 0
+          for: 10m
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            message: Unassigned shards on {{$labels.cluster}}
+            description: Some shards ({{$value}}%) are unassigned on {{$labels.cluster}}
+              for more than 10 minutes. Results from those shards are unavailable in returned
+              results.
+        - alert: ElasticSearchRelocationShards [PAM41]
+          expr: es_cluster_shards_number{kubernetes_namespace="openshift-logging",type="relocating"} > 0
+          for: 30m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            message: Relocating shards on {{ $labels.cluster }}
+            description: Some shards ({{$value}}%) are relocating on {{$labels.cluster}}
+              for more than 30 minutes. 
+        - alert: ElasticSearchInitializingShards [PAM42]
+          expr: es_cluster_shards_number{kubernetes_namespace="openshift-logging",type="initializing"} > 0
+          for: 1h
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            message: Initializing shards on {{ $labels.cluster }}
+            description: Some shards ({{$value}}%) are initializing on {{ $labels.es_node }} 
+              on cluster {{$labels.cluster}} for more than 1 hour.             
+        - alert: ElasticSearchTooManyIndexFailures [PAM43]
+          expr: delta(es_index_indexing_index_failed_count{kubernetes_namespace="openshift-logging"}[1m]) > 0
+          for: 10m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            description: There are documents indexing failures in cluster {{ $labels.cluster}}
+              on node {{$labels.es_node}}. Please check logs to get more details.
+            message: Indexing failures on {{ $labels.cluster }}
+        - alert: ElasticSearchIndexIsThrootled [PAM44]
+          expr: es_index_indexing_is_throttled_bool{kubernetes_namespace="openshift-logging"} > 0
+          for: 1h
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            description: Index {{$labels.index}} on cluster {{$labels.cluster}} is throttled
+              for more than 1 hour. Some documents can be missing from returned results.
+            message: Index {{$labels.index}} on {{$labels.cluster}} throttled
+        - alert: ElasticSearchHeapUsageTooHigh [PAM45]
+          expr: es_jvm_mem_heap_used_percent{kubernetes_namespace="openshift-logging"} > 90
+          for: 5m
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            message: "Elasticsearch Heap usage too high on {{ $labels.es_node }}"
+            description: "The heap usage is over 90% for 5 minutes."
+        - alert: ElasticSearchHeapUsageWarning [PAM46]
+          expr: es_jvm_mem_heap_used_percent{kubernetes_namespace="openshift-logging"} > 80
+          for: 5m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            message: "Elasticsearch Heap usage warning on {{ $labels.es_node }}"
+            description: "The heap usage is over 80% for 5 minutes."
+        - alert: FluentdTooManyErrors [PAM48]
+          expr: sum by(kubernetes_node_name, job) (rate(fluentd_output_status_num_errors[1m])) > 10
+          for: 1m
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            message: "Fluentd errors in log on node {{ $labels.kubernetes_node_name }}"
+            description: "There are errors in Fluentd log for more than 5 minutes."
+        - alert: FluentdRecordsCountsHigh [PAM70]
+          expr: sum(rate(fluentd_output_status_emit_count{job="logging-pods"}[5m])) by (kubernetes_node_name) > (3 * sum(rate(fluentd_output_status_emit_count{job="logging-pods"}[15m])) by (kubernetes_node_name))
+          for: 10m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            message: "Fluentd records count is critical on node {{ $labels.kubernetes_node_name }}"
+            description: "In the last 5m, records counts has increased 3 times, comparing to the latest 15 min."
+        - alert: FluentdQueueLengthHigh [PAM72]
+          expr: delta(fluentd_output_status_buffer_queue_length[1m]) > 1
+          for: 12h
+          labels:
+            ruletype: infrastructure
+            severity: HIGH
+          annotations:
+            message: "Fluentd file buffer usage issue"
+            description: In the last 12h, fluentd {{ $labels.kubernetes_node_name }} buffer queue length
+              constantly increased more than 1. Current value is {{ $value }}.
+        - alert: FluentdQueueLengthBurst [PAM71]
+          annotations:
+            description: In the last minute, fluentd {{ $labels.kubernetes_node_name }} buffer queue length
+              increased more than 32. Current value is {{ $value }}.
+            message: Fluentd is overwhelmed
+          expr: delta(fluentd_output_status_buffer_queue_length[1m]) > 32
+          for: 1m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+        - alert: FluentdQueueIsFull [PAM73]
+          expr: fluentd_status_buffer_queue_length == 32
+          for: 3m
+          labels:
+            ruletype: infrastructure
+            severity: LOW
+          annotations:
+            message: "Fluentd buffer queue is full"
+            description: "Fluentd buffer queue ({{ $labels.plugin_id }}) is full on {{ $labels.kubernetes_node_name }}"

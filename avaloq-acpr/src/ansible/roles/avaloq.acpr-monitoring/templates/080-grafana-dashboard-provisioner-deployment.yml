@@ -1,0 +1,133 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+
+  ### Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app: avaloq-grafana-dashboard-provisioner
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      name: avaloq-grafana-dashboard-provisioner
+    spec:
+      ports:
+        - name: http
+          port: 9090
+          protocol: TCP
+          targetPort: 9090
+      selector:
+        app: avaloq-grafana-dashboard-provisioner
+      sessionAffinity: None
+      type: ClusterIP
+
+  ### NetworkPolicy
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: avaloq-grafana-dashboard-provisioner
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels:
+                  app: prometheus
+          ports:
+            - port: 9090
+              protocol: TCP
+      podSelector:
+        matchLabels:
+          app: avaloq-grafana-dashboard-provisioner
+
+  ### Deployment
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: avaloq-grafana-dashboard-provisioner
+      labels:
+        app: grafana
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+        avaloq.com/zone: core-internal
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: avaloq-grafana-dashboard-provisioner
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          annotations:
+            prometheus.io/path: /metrics
+            prometheus.io/port: '9090'
+            prometheus.io/scheme: http
+            prometheus.io/scrape: 'true'
+          labels:
+            app: avaloq-grafana-dashboard-provisioner
+            avaloq.com/app: acpr-monitoring
+            app.kubernetes.io/component: monitoring
+        spec:
+          serviceAccountName: avaloq-grafana-dashboard-provisioner
+          containers:
+            - name: avaloq-grafana-dashboard-provisioner
+              image: {{ acpr_monitoring_grafana_dashboard_provisioner_image }}
+              env:
+                - name: WATCHED_NAMESPACE
+                  value: "*"
+                - name: DASHBOARD_TYPES
+                  value: "infrastructure,application"
+                - name: UNIFY_DASHBOARD_TYPES
+                  value: "application"
+                - name: PROCESS_DASHBOARD_TYPES
+                  value: "application"
+                - name: FULL_RECONCILIATION_INTERVAL_S
+                  value: "3600"
+                - name: COLORS
+                  value: "false"
+                - name: METRICS
+                  value: "true"
+                - name: METRICS_JVM
+                  value: "true"
+                - name: METRICS_PORT
+                  value: "9090"
+              ports:
+                - containerPort: 9090
+                  name: http
+                  protocol: TCP
+{% if acpr_monitoring_grafana_dashboard_provisioner_resources_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_grafana_dashboard_provisioner_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_grafana_dashboard_provisioner_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_grafana_dashboard_provisioner_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_grafana_dashboard_provisioner_resources_request_memory }}
+{% endif %}
+              volumeMounts:
+                - mountPath: /opt/avaloq/grafana/dashboards
+                  name: grafana-dashboards
+          nodeSelector:
+            node-role.kubernetes.io/compute: "true"
+          volumes:
+            - name: grafana-dashboards
+              persistentVolumeClaim:
+                claimName: grafana-dashboards-volume

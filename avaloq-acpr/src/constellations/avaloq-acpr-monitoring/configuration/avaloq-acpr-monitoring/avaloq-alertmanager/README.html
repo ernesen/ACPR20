@@ -1,0 +1,189 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_VERSION</td>
+<td>OpenShift version where this constellation is deployed to. Valid values are 3 or 4.</td>
+<td>true</td>
+<td>4</td>
+</tr>
+<tr>
+<td>OPENSHIFT_NAMESPACE</td>
+<td>The namespace used on Openshift where this constellation is deployed to.</td>
+<td>true</td>
+<td>acpr-monitoring</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_DEPLOY_SECRET</td>
+<td>Set to 'false' if you don't want to deploy secrets. It can be useful when using Sealed Secrets</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_DEPLOY_PVC</td>
+<td>Set to 'false' if you don't want to deploy PVCs</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_SESSION_SECRET</td>
+<td>Secret string used to encrypt sessions</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry containing the Red Hat images. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_CONTAINER_IMAGE_PULL_POLICY</td>
+<td>The pull policy to use for the container image. Valid values are <code>IfNotPresent</code> and <code>Always</code>, default is <code>IfNotPresent</code>.</td>
+<td>false</td>
+<td>IfNotPresent</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_SHOW_HTPASSWD_FORM</td>
+<td>Show or hide htpasswd form in Alertmanager proxy</td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_REPLICAS</td>
+<td>Number of replicas of Alertmanager deployment</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_NODE_SELECTOR_KEY</td>
+<td>Specify a node where Alertmanager is deployed</td>
+<td>false</td>
+<td>dummySelector</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_NODE_SELECTOR_VALUE</td>
+<td>Specify a node where Alertmanager is deployed</td>
+<td>false</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_CONTAINER_IMAGE</td>
+<td></td>
+<td>false</td>
+<td>openshift3/prometheus-alertmanager:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_PROXY_CONTAINER_IMAGE</td>
+<td></td>
+<td>false</td>
+<td>openshift3/oauth-proxy:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_ROUTE_HOSTNAME</td>
+<td>Select a hostname to use to access Alertmanager. If empty, OpenShift generates the hostname automatically.</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_CPU</td>
+<td></td>
+<td>false</td>
+<td>500m</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_CPU</td>
+<td>Alertmanager CPU request</td>
+<td>false</td>
+<td>200m</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_MEMORY</td>
+<td>Alertmanager memory limit</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_MEMORY</td>
+<td>Alertmanager memory request</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_CPU</td>
+<td></td>
+<td>false</td>
+<td>50m</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_CPU</td>
+<td>Alertmanager proxy CPU request</td>
+<td>false</td>
+<td>10m</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_MEMORY</td>
+<td>Alertmanager proxy memory limit</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_MEMORY</td>
+<td></td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+</tbody>
+</table>
+<h1>AvaloqFiles</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>alertmanager-configuration/alertmanager-configuration.yml</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/avaloq-alertmanager/alertmanager-configuration/alertmanager-configuration.yml">alertmanager-configuration.yml</a></td>
+</tr>
+<tr>
+<td>alertmanager-configuration/htpasswd</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/avaloq-alertmanager/alertmanager-configuration/htpasswd">htpasswd</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> The default values for AvaloqFiles (if any) are present after running the <code>fetch</code> command.</p>

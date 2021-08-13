@@ -1,0 +1,21 @@
+---
+- name: Check if inventory file is pointing to Avaloq docker registry
+  block:
+    - lineinfile:
+        path: "{{ inventory_file }}"
+        regexp: "{{ item }}"
+        state: absent
+      check_mode: yes
+      register: registry_check_result
+      loop:
+        - 'oreg_url=.*avaloq\.com.*'
+        - 'osm_etcd_image=.*avaloq\.com.*'
+        - 'openshift_additional_registry_credentials=.*avaloq\.com.*'
+
+    - debug:
+        msg: "The registry related variables are pointing to Avaloq's docker registry. \
+              This is not recommended configuration. Please see the documentation for more information."
+      when: registry_check_result.changed
+
+  delegate_to: 127.0.0.1
+  run_once: True

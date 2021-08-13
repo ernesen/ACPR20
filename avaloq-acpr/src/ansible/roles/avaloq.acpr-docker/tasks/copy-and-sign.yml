@@ -1,0 +1,154 @@
+---
+- name: Pre-pull container images
+  become: true
+  block:
+    - name: Get list of images to prepull
+      shell: "cat {{ registry_configuration['image_list'] }} | sort | uniq"
+      changed_when: False
+      register: images_to_prepull
+      when: registry_configuration['image_list'] is defined
+
+    - block:
+        - tempfile:
+            state: file
+          register: private_key
+
+        - copy:
+            content: "{{ registry_configuration['private_key'] }}"
+            dest: "{{ private_key.path }}"
+            no_log: true
+
+        - name: Import private PGP key
+          command:  "gpg2 --batch --import {{ private_key.path }}"
+          changed_when: False
+          register: output
+          failed_when: output.rc | int > 2
+      always:
+        - file:
+            path: "{{ private_key.path }}"
+            state: absent
+          when: private_key.path is defined
+          no_log: true
+      when: registry_configuration['private_key'] is defined
+
+    - block:
+        - name: Stop GPG Agent
+          command: gpg-connect-agent killagent /bye
+          failed_when: False
+          changed_when: False
+
+        - name: Start new instance of GPG agent
+          command: gpg-agent --daemon --allow-preset-passphrase
+          changed_when: False
+
+        - name: Get fingerprint
+          shell: "gpg --fingerprint {{ registry_configuration['sign_by'] }} | grep 'Key fingerprint' | tr -d ' ' | cut -d= -f2"
+          register: fingerprint
+          changed_when: False
+          failed_when: fingerprint.stdout == "" or fingerprint.rc != 0
+
+        - name: Save passphrase to agent
+          command: "/usr/libexec/gpg-preset-passphrase -v --preset -P {{ registry_configuration['private_key_passphrase'] }} {{ fingerprint.stdout }}"
+          changed_when: False
+          failed_when: fingerprint.stdout == ""
+          no_log: true
+      when: registry_configuration['private_key_passphrase'] is defined
+
+    - block:
+        - name: Login to registries
+          block:
+            - command: "docker login -u {{ registry_configuration['source_registry_username'] }} -p {{ registry_configuration['source_registry_password'] }} {{ registry_configuration['source_registry_url'] }}"
+              changed_when: False
+              when:
+                - registry_configuration['source_registry_username'] is defined
+                - registry_configuration['source_registry_password'] is defined
+              no_log: true
+
+            - command: "docker login -u {{ registry_configuration['destination_registry_username'] }} -p {{ registry_configuration['destination_registry_password'] }} {{ registry_configuration['destination_registry_url'] }}"
+              changed_when: False
+              when:
+                - registry_configuration['destination_registry_username'] is defined
+                - registry_configuration['destination_registry_password'] is defined
+              no_log: true
+
+            - command: "docker login -u {{ registry_configuration['destination_push_registry_username'] }} -p {{ registry_configuration['destination_push_registry_password'] }} {{ registry_configuration['destination_push_registry_url'] }}"
+              changed_when: False
+              when:
+                - registry_configuration['destination_push_registry_username'] is defined
+                - registry_configuration['destination_push_registry_password'] is defined
+              no_log: true
+
+        - name: Pull images
+          command: "docker pull {% if item is match('^[-a-zA-Z0-9.]{1,256}\\.[a-zA-Z0-9]{1,6}(:\\d{1,5})?\\/') %}{{ item }}{% else %}{{ registry_configuration['source_registry_url'] }}/{{ item }}{% endif %}"
+          changed_when: False
+          loop: "{{ images_to_prepull.stdout_lines }}"
+
+        - name: Tag images
+          command: "docker tag {% if item is match('^[-a-zA-Z0-9.]{1,256}\\.[a-zA-Z0-9]{1,6}(:\\d{1,5})?\\/') %}{{ item }}{% else %}{{ registry_configuration['source_registry_url'] }}/{{ item }}{% endif %} {{ registry_configuration['destination_push_registry_url'] | default(registry_configuration['destination_registry_url']) }}/{{ item }}"
+          changed_when: False
+          loop: "{{ images_to_prepull.stdout_lines }}"
+
+        - name: Push images
+          command: "docker push {{ registry_configuration['destination_push_registry_url'] | default(registry_configuration['destination_registry_url']) }}/{{ item }}"
+          changed_when: False
+          loop: "{{ images_to_prepull.stdout_lines }}"
+
+        - name: Sign images
+          block:
+            - tempfile:
+                state: directory
+              register: sigstore
+
+            - command: "atomic sign --directory {{ sigstore.path }} --gnupghome /root/.gnupg/ --sign-by {{ registry_configuration['sign_by'] }}  {{ registry_configuration['destination_registry_url'] }}/{{ item }}"
+              changed_when: False
+              loop: "{{ images_to_prepull.stdout_lines }}"
+              environment:
+                http_proxy: "{{acpr_docker_http_proxy | default('') }}"
+                https_proxy: "{{ acpr_docker_https_proxy | default('') }}"
+                no_proxy: "{{ acpr_docker_no_proxy | default('') }}"
+              when:
+                - registry_configuration['private_key'] is defined
+                - registry_configuration['sign_by'] is defined
+
+      always:
+        - name: Logout from registries
+          block:
+           - command: "docker logout {{ registry_configuration['source_registry_url'] }}"
+             changed_when: False
+             when:
+               - registry_configuration['source_registry_url'] is defined
+           - command: "docker logout {{ registry_configuration['destination_registry_url'] }}"
+             changed_when: False
+           - command: "docker logout {{ registry_configuration['destination_push_registry_url'] }}"
+             changed_when: False
+             when: registry_configuration['destination_push_registry_url'] is defined
+
+        - name: Stop GPG Agent
+          command: gpg-connect-agent killagent /bye
+          changed_when: False
+          failed_when: False
+          when: registry_configuration['private_key_passphrase'] is defined
+
+    - name: Push signatures to sigstore
+      block:
+        - find:
+            paths: "{{ sigstore.path }}"
+            recurse: yes
+          register: signatures_to_upload
+        - command: "curl {% if registry_configuration['sigstore_tls_verify'] | default('true') | bool is sameas false %}-k{%endif%} {% if registry_configuration['sigstore_username'] is defined and registry_configuration['sigstore_password'] is defined %}-u {{ registry_configuration['sigstore_username'] }}:{{ registry_configuration['sigstore_password'] }}{%endif%} {{ registry_configuration['sigstore_url'] }}/{{ item.path | replace(sigstore.path +'/', '') }} --upload-file {{ item.path }}"
+          environment:
+            http_proxy: "{{acpr_docker_http_proxy | default('') }}"
+            https_proxy: "{{ acpr_docker_https_proxy | default('') }}"
+            no_proxy: "{{ acpr_docker_no_proxy | default('') }}"
+          args:
+            warn: False
+          changed_when: False
+          loop: "{{ signatures_to_upload.files }}"
+          when: registry_configuration['sigstore_url'] is defined
+          no_log: true
+
+    - name: Remove signatures from localhost
+      file:
+        path: "{{  sigstore.path  }}"
+        state: absent
+      when:  sigstore.path is defined

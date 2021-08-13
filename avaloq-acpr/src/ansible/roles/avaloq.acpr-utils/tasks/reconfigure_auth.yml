@@ -1,0 +1,108 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- import_role:
+    name: yedit
+
+- import_role:
+    name: /usr/share/ansible/openshift-ansible/roles/lib_utils
+
+- name: Create temporary master-config file
+  copy:
+    src: "{{ acpr_master_config_org }}"
+    dest: "{{ acpr_master_config_new }}"
+    mode: 0600
+    remote_src: yes
+  changed_when: False
+
+- name: Remove current identity providers
+  yedit:
+    src: "{{ acpr_master_config_new }}"
+    key: oauthConfig.identityProviders
+    value: []
+    state: present
+  changed_when: False
+
+- name: Add identityProviders key
+  lineinfile:
+    path: "{{ acpr_master_config_new }}"
+    regexp: '^  identityProviders: \[\]$'
+    line: '  identityProviders:'
+    state: present
+  changed_when: False
+
+- name: Add identityProviders data
+  blockinfile:
+    path: "{{ acpr_master_config_new }}"
+    insertafter: '^  identityProviders:'
+    marker: "{{ acpr_marker }}"
+    block: |2
+        {{ openshift_master_identity_providers | translate_idps('v1') | indent(2) }}
+  changed_when: False
+
+- name: Cleanup
+  lineinfile:
+    path: "{{ acpr_master_config_new }}"
+    line: "{{ acpr_marker }}"
+    state: absent
+  changed_when: False
+
+- name: Create the ldap ca file if needed
+  copy:
+    dest: "/etc/origin/master/{{ item.name }}_ldap_ca.crt"
+    content: "{{ acpr_ldap_ca }}"
+    mode: 0600
+    backup: yes
+  when:
+  - acpr_ldap_ca != None
+  - item.kind == 'LDAPPasswordIdentityProvider'
+  with_items: "{{ openshift_master_identity_providers }}"
+  notify: Restart MasterAPI
+  no_log: true
+
+- name: Create the openid ca file if needed
+  copy:
+    dest: "/etc/origin/master/{{ item.name }}_openid_ca.crt"
+    content: "{{ acpr_openid_ca }}"
+    mode: 0600
+    backup: yes
+  when:
+    - acpr_openid_ca != None
+    - item.kind == 'OpenIDIdentityProvider'
+  with_items: "{{ openshift_master_identity_providers }}"
+  notify: Restart MasterAPI
+
+- name: Ensure htpasswd file exists
+  copy:
+    src: "{{ openshift_master_htpasswd_file }}"
+    dest: "/etc/origin/master/htpasswd"
+    mode: 0600
+  when:
+  - openshift_master_htpasswd_file is defined
+  - item.kind == 'HTPasswdPasswordIdentityProvider'
+  with_items: "{{ openshift_master_identity_providers }}"
+  no_log: true
+
+- name: Swap master-config files
+  copy:
+    src: "{{ acpr_master_config_new }}"
+    dest: "{{ acpr_master_config_org }}"
+    mode: 0600
+    remote_src: yes
+  notify: Restart MasterAPI
+
+- name: Remove temporary master-config file
+  file:
+    path: "{{ acpr_master_config_new }}"
+    state: absent

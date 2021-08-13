@@ -1,0 +1,17 @@
+
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  app.kubernetes.io/managed-by: avaloq-acpr
+  name: {{ item.name }}
+  namespace: {{ item.namespace }}
+spec:
+  name: {{ item.name }}
+  channel: "{{ item.channel }}"
+  installPlanApproval: {{ item.installPlanApproval | default('Automatic') }}
+{% if item.startingCSV is defined %}
+  startingCSV: {{ item.startingCSV }}
+{% endif %}
+  source: {{ item.source }}
+  sourceNamespace: openshift-marketplace

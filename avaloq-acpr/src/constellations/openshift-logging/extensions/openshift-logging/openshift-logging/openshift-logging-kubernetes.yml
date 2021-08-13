@@ -1,0 +1,474 @@
+apiVersion: avaloq/v1
+kind: AvaloqFiles
+spec:
+  parameters:
+  - name: forwarder-configuration/secure-forward.conf
+    validation:
+      required: false
+      type: text
+    value: |
+      <store>
+        @type null
+      </store>
+  - name: forwarder-configuration/syslog.conf
+    validation:
+      required: false
+      type: text
+    value: |
+      <store>
+        @type null
+      </store>
+---
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: OPENSHIFT_LOGGING_CURATOR_SCHEDULE
+    validation:
+      type: text
+      required: false
+    value: 30 3 * * *
+    description: |
+      Settings for configuring the Curator schedule. Curator is used to remove data that is in the Elasticsearch index format prior to OpenShift Container Platform 4.6 and will be removed in a later release.
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_REPLICATION_POLICY
+    validation:
+      type: text
+      required: false
+    value: SingleRedundancy
+    description: |
+      You can set the policy that defines how Elasticsearch shards are replicated across data nodes in the cluster. For more information see https://docs.openshift.com/container-platform/4.6/serverless/knative_serving/cluster-logging-serverless.html#cluster-logging-deploy-about-config_cluster-logging-serverless
+  - name: OPENSHIFT_LOGGING_RETENTIONPOLICY_APPLICATION_MAXAGE
+    validation:
+      type: text
+      required: false
+    value: 1d
+    description: |
+      Specify the length of time that Elasticsearch should retain each log source. Enter an integer and a time designation: weeks(w), hours(h/H), minutes(m) and seconds(s). For example, 7d for seven days. Logs older than the maxAge are deleted. You must specify a retention policy for each log source or the Elasticsearch indices will not be created for that source.
+  - name: OPENSHIFT_LOGGING_RETENTIONPOLICY_INFRA_MAXAGE
+    validation:
+      type: text
+      required: false
+    value: 7d
+    description: |
+      Specify the length of time that Elasticsearch should retain each log source. Enter an integer and a time designation: weeks(w), hours(h/H), minutes(m) and seconds(s). For example, 7d for seven days. Logs older than the maxAge are deleted. You must specify a retention policy for each log source or the Elasticsearch indices will not be created for that source.
+  - name: OPENSHIFT_LOGGING_RETENTIONPOLICY_AUDIT_MAXAGE
+    validation:
+      type: text
+      required: false
+    value: 7d
+    description: |
+      Specify the length of time that Elasticsearch should retain each log source. Enter an integer and a time designation: weeks(w), hours(h/H), minutes(m) and seconds(s). For example, 7d for seven days. Logs older than the maxAge are deleted. You must specify a retention policy for each log source or the Elasticsearch indices will not be created for that source.
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_NODECOUNT
+    validation:
+      type: text
+      required: false
+    value: 3
+    description: |
+      The maximum number of Elasticsearch master nodes is three. If you specify a nodeCount greater than 3, OpenShift Container Platform creates three Elasticsearch nodes that are Master-eligible nodes, with the master, client, and data roles. The additional Elasticsearch nodes are created as Data-only nodes, using client and data roles. Master nodes perform cluster-wide actions such as creating or an index, shard allocation, and tracking nodes. Data nodes hold the shards and perform data-related operations such as CRUD, search, and aggregations. Data-related operations are I/O-, memory-, and CPU-intensive. It is important to monitor these resources and to add more Data nodes if the current nodes are overloaded.
+  - name: OPENSHIFT_LOGGING_VERSION
+    validation:
+      type: text
+      required: false
+    value: 4.6
+    description: |
+      The OpenShift logging version in the format #.#
+  - name: OPENSHIFT_LOGGING_KIBANA_REPLICAS
+    validation:
+      type: text
+      required: false
+    value: 1
+    description: |
+      You can scale Kibana for redundancy.
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_STORAGE_SIZE
+    validation:
+      type: text
+      required: false
+    value: 200G
+    description: |
+      The amount of storage available to Elasticsearch.
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_STORAGE_CLASS
+    validation:
+      type: text
+      required: false
+    description: |
+      The Storage class that Elasticsearch shall use.
+  - name: OPENSHIFT_LOGGING_FLUENTD_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 736Mi
+    description: Fluentd memory request
+  - name: OPENSHIFT_LOGGING_FLUENTD_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 736Mi
+    description: Fluentd memory limit
+  - name: OPENSHIFT_LOGGING_FLUENTD_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 100m
+    description: Fluentd CPU request
+  - name: OPENSHIFT_LOGGING_FLUENTD_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    description: Fluentd CPU limit
+  - name: OPENSHIFT_LOGGING_STARTING_CSV
+    validation:
+      type: text
+      required: false
+    value: clusterlogging.4.6.0-202102200141.p0
+    description: |
+      Set a specific version of the operator
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 16Gi
+    description: Elasticsearch memory request
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 16Gi
+    description: Elasticsearch memory limit
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 500m
+    description: Elasticsearch CPU request
+  - name: OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    description: Elasticsearch CPU limit
+  - name: OPENSHIFT_LOGGING_KIBANA_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 1Gi
+    description: Kibana memory request
+  - name: OPENSHIFT_LOGGING_KIBANA_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 1Gi
+    description: Kibana memory limit
+  - name: OPENSHIFT_LOGGING_KIBANA_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 500m
+    description: Kibana CPU request
+  - name: OPENSHIFT_LOGGING_KIBANA_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    description: Kibana CPU limit
+  - name: OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 100Mi
+    description: Kibana proxy memory request
+  - name: OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 100Mi
+    description: Kibana proxy memory limit
+  - name: OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 100m
+    description: Kibana proxy CPU request
+  - name: OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    description: Kibana proxy CPU limit
+  - name: OPENSHIFT_LOGGING_CURATOR_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 200Mi
+    description: Curator memory request
+  - name: OPENSHIFT_LOGGING_CURATOR_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 200Mi
+    description: Curator memory limit
+  - name: OPENSHIFT_LOGGING_CURATOR_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 200m
+    description: Curator CPU request
+  - name: OPENSHIFT_LOGGING_CURATOR_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    description: Curator CPU limit
+  - name: OPENSHIFT_LOGGING_SUBSCRIPTION_SOURCE
+    validation:
+      type: text
+      required: false
+    value: acpr-redhat-operators
+    description: |
+      Source of OpenShift Logging operator
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: storageClassName-patch
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_ELASTICSEARCH_STORAGE_CLASS',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: |
+        spec.logStore.elasticsearch.storage.storageClassName
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: fluentd-resources-cpu-limits
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_FLUENTD_RESOURCES_LIMITS_CPU',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.collection.logs.fluentd.resources.limits.cpu
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: elasticsearch-resources-cpu-limits
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_LIMITS_CPU',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.logStore.elasticsearch.resources.limits.cpu
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: kibana-resources-cpu-limits
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_KIBANA_RESOURCES_LIMITS_CPU',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.visualization.kibana.resources.limits.cpu
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: kibana-proxy-resources-cpu-limits
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_LIMITS_CPU',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.visualization.kibana.proxy.resources.limits.cpu
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: curator-resources-cpu-limits
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_CURATOR_RESOURCES_LIMITS_CPU',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.curation.curator.resources.limits.cpu
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: retentionpolicy-infra-maxage
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_RETENTIONPOLICY_INFRA_MAXAGE',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.logStore.retentionPolicy.infra
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: retentionpolicy-audit-maxage
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_RETENTIONPOLICY_AUDIT_MAXAGE',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.logStore.retentionPolicy.audit
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: retentionpolicy-application-maxage
+    when:
+      matching:
+        kind: ClusterLogging
+        metadata.name: instance
+      condition: params.getOrDefault('OPENSHIFT_LOGGING_RETENTIONPOLICY_APPLICATION_MAXAGE',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.logStore.retentionPolicy.application
+---
+apiVersion: logging.openshift.io/v1
+kind: ClusterLogging
+metadata:
+  name: instance
+  namespace: openshift-logging
+spec:
+  logStore:
+    type: elasticsearch
+    retentionPolicy:
+      application:
+        maxAge: ${OPENSHIFT_LOGGING_RETENTIONPOLICY_APPLICATION_MAXAGE}
+      infra:
+        maxAge: ${OPENSHIFT_LOGGING_RETENTIONPOLICY_INFRA_MAXAGE}
+      audit:
+        maxAge: ${OPENSHIFT_LOGGING_RETENTIONPOLICY_AUDIT_MAXAGE}
+    elasticsearch:
+      nodeCount: ${OPENSHIFT_LOGGING_ELASTICSEARCH_NODECOUNT}
+      resources:
+        limits:
+          cpu: ${OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_LIMIT_CPU}
+          memory: ${OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_LIMIT_MEMORY}
+        requests:
+          cpu: ${OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_REQUEST_CPU}
+          memory: ${OPENSHIFT_LOGGING_ELASTICSEARCH_RESOURCES_REQUEST_MEMORY}
+      storage:
+        storageClassName: ${OPENSHIFT_LOGGING_ELASTICSEARCH_STORAGE_CLASS}
+        size: ${OPENSHIFT_LOGGING_ELASTICSEARCH_STORAGE_SIZE}
+      redundancyPolicy: '${OPENSHIFT_LOGGING_ELASTICSEARCH_REPLICATION_POLICY}'
+  visualization:
+    type: kibana
+    kibana:
+      replicas: ${OPENSHIFT_LOGGING_KIBANA_REPLICAS}
+      resources:
+        limits:
+          cpu: ${OPENSHIFT_LOGGING_KIBANA_RESOURCES_LIMIT_CPU}
+          memory: ${OPENSHIFT_LOGGING_KIBANA_RESOURCES_LIMIT_MEMORY}
+        requests:
+          cpu: ${OPENSHIFT_LOGGING_KIBANA_RESOURCES_REQUEST_CPU}
+          memory: ${OPENSHIFT_LOGGING_KIBANA_RESOURCES_REQUEST_MEMORY}
+      proxy:
+        resources:
+          limits:
+            cpu: ${OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_LIMIT_CPU}
+            memory: ${OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_REQUEST_CPU}
+            memory: ${OPENSHIFT_LOGGING_KIBANA_PROXY_RESOURCES_REQUEST_MEMORY}
+  curation:
+    type: curator
+    curator:
+      schedule: ${OPENSHIFT_LOGGING_CURATOR_SCHEDULE}
+      resources:
+        limits:
+          cpu: ${OPENSHIFT_LOGGING_CURATOR_RESOURCES_LIMIT_CPU}
+          memory: ${OPENSHIFT_LOGGING_CURATOR_RESOURCES_LIMIT_MEMORY}
+        requests:
+          cpu: ${OPENSHIFT_LOGGING_CURATOR_RESOURCES_REQUEST_CPU}
+          memory: ${OPENSHIFT_LOGGING_CURATOR_RESOURCES_REQUEST_MEMORY}
+  collection:
+    logs:
+      type: fluentd
+      fluentd:
+        resources:
+          limits:
+            cpu: ${OPENSHIFT_LOGGING_FLUENTD_RESOURCES_LIMIT_CPU}
+            memory: ${OPENSHIFT_LOGGING_FLUENTD_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${OPENSHIFT_LOGGING_FLUENTD_RESOURCES_REQUEST_CPU}
+            memory: ${OPENSHIFT_LOGGING_FLUENTD_RESOURCES_REQUEST_MEMORY}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secure-forward
+data:
+  secure-forward.conf: ${forwarder-configuration/secure-forward.conf}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syslog
+data:
+  secure-forward.conf: ${forwarder-configuration/syslog.conf}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-logging
+  annotations:
+    openshift.io/node-selector: ''
+  labels:
+    openshift.io/cluster-monitoring: 'true'
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: cluster-logging
+  namespace: openshift-logging
+spec:
+  targetNamespaces:
+  - openshift-logging
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cluster-logging
+  namespace: openshift-logging
+spec:
+  channel: '${OPENSHIFT_LOGGING_VERSION}'
+  name: cluster-logging
+  source: '${OPENSHIFT_LOGGING_SUBSCRIPTION_SOURCE}'
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+  startingCSV: '${OPENSHIFT_LOGGING_STARTING_CSV}'

@@ -1,0 +1,55 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Configure ACPR RPM PGP key and ACPR Yum repositories
+  become: true
+  block:
+    - name: Add ACPR RPM repository GPG key
+      copy:
+        dest: /etc/pki/rpm-gpg/RPM-GPG-KEY-acpr
+        src: RPM-GPG-KEY-acpr
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Import ACPR RPM repository GPG key
+      rpm_key:
+        key:  /etc/pki/rpm-gpg/RPM-GPG-KEY-acpr
+        state: present
+
+    - name: Add ACPR required RPM repositories
+      yum_repository:
+        name: "{{ item.key }}"
+        description: "{{ item.value.description }}"
+        file: acpr
+        baseurl: "{{ item.value.url }}"
+        gpgcheck: "{{ item.value.gpgcheck | default(acpr_rpm_gpgcheck) }}"
+        gpgkey: "{{ item.value.gpgkey | default(acpr_rpm_gpgkey) }}"
+        enabled: "{{ item.value.enabled |default('yes') }}"
+        username: "{{  item.value.username | default(acpr_rpm_repositories_username) | default(omit) }}"
+        password: "{{ item.value.password | default(acpr_rpm_repositories_password) | default(omit) }}"
+        proxy: "{{ item.value.proxy | default(acpr_rpm_proxy) | default(omit) }}"
+        proxy_username: "{{ item.value.proxy_username | default(acpr_rpm_proxy_username) | default(omit) }}"
+        proxy_password: "{{ item.value.proxy_password | default(acpr_rpm_proxy_password) | default(omit) }}"
+        sslcacert: "{{ item.value.sslcacert | default(acpr_rpm_sslcacert) | default(omit) }}"
+        sslverify: "{{ item.value.sslverify | default(acpr_rpm_sslverify) | default('yes') }}"
+        mode: 0640
+        owner: root
+        group: root
+      loop: "{{ acpr_rpm_repository_defaults|combine(acpr_rpm_repositories, recursive=True)|dict2items }}"
+      when:
+        - item.value.url is defined
+        - item.value.description is defined
+
+  when: acpr_rpm_repositories != 'none'

@@ -1,0 +1,847 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+{% if cust_acpr_rpm_repositories is defined %}
+{% set var={'acpr_rpm_repositories': cust_acpr_rpm_repositories} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+acpr_os_version: {{ cust_os_version | regex_replace('^v?(4\\.[0-9]+\\.[0-9]+)$', '\\1')}}
+acpr_os_release: {{ cust_os_version | regex_replace('^v?(4\\.[0-9]+)\\.[0-9]+$', '\\1')}}
+acpr_os_maj_version: {{ cust_os_version | regex_replace('^v?([34])\\.[0-9]+\\.[0-9]+$', '\\1')}}
+acpr_version: {{ acpr_version }}
+acpr_os_channel: '{{ cust_os_channel }}'
+acpr_redhat_disconnected: '{{ cust_redhat_disconnected }}'
+avaloq_installator_version: 1.10.0
+
+{# RPM Repository custom variables #}
+{%- if cust_acpr_rpm_repositories_username is not none and cust_acpr_rpm_repositories_username is defined %}
+acpr_rpm_repositories_username: {{ cust_acpr_rpm_repositories_username }}
+{% endif %}
+{% if cust_acpr_rpm_repositories_password is not none and cust_acpr_rpm_repositories_password is defined %}
+acpr_rpm_repositories_password: {{ cust_acpr_rpm_repositories_password }}
+{% endif %}
+{% if cust_acpr_rpm_gpgcheck is not none and cust_acpr_rpm_gpgcheck is defined %}
+acpr_rpm_gpgcheck: {{ cust_acpr_rpm_gpgcheck }}
+{% endif %}
+{% if cust_acpr_rpm_gpgkey is not none and cust_acpr_rpm_gpgkey is defined %}
+acpr_rpm_gpgkey: {{ cust_acpr_rpm_gpgkey }}
+{% endif %}
+{% if cust_acpr_rpm_proxy is not none and cust_acpr_rpm_proxy is defined %}
+acpr_rpm_proxy: {{ cust_acpr_rpm_proxy }}
+{% endif %}
+{% if cust_acpr_rpm_proxy_username is not none and cust_acpr_rpm_proxy_username is defined %}
+acpr_rpm_proxy_username: {{ cust_acpr_rpm_proxy_username }}
+{% endif %}
+{% if cust_acpr_rpm_proxy_password is not none and cust_acpr_rpm_proxy_password is defined %}
+acpr_rpm_proxy_password: {{ cust_acpr_rpm_proxy_password }}
+{% endif %}
+{% if cust_acpr_rpm_sslcacert is not none and cust_acpr_rpm_sslcacert is defined %}
+acpr_rpm_sslcacert: {{ cust_acpr_rpm_sslcacert }}
+{% endif %}
+{% if cust_acpr_rpm_sslverify is not none and cust_acpr_rpm_sslverify is defined %}
+acpr_rpm_sslverify: {{ cust_acpr_rpm_sslverify }}
+{% endif %}
+
+{% if cust_registry_location is defined %}
+acpr_docker_registry_location: {{ cust_registry_location | regex_replace('\/openshift3','') }}
+{% endif %}
+{% if cust_registry_cacert is defined %}
+acpr_docker_registry_cacert: |
+{{ cust_registry_cacert |indent(indentfirst=True)}}
+
+
+{% endif %}
+{% if acpr_registry_default_cacert is defined %}
+acpr_registry_default_cacert: |
+{{ acpr_registry_default_cacert |indent(indentfirst=True)}}
+
+
+{% endif %}
+{% if cust_acpr_logging_node_selector is defined %}
+acpr_logging_node_selector: {{ cust_acpr_logging_node_selector }}
+{% endif %}
+{% if cust_acpr_logging_masterapi_audit_feed_efk is defined %}
+acpr_logging_masterapi_audit_feed_efk: {{ cust_acpr_logging_masterapi_audit_feed_efk }}
+{% endif %}
+{% if cust_acpr_logging_curator_retention is defined %}
+{% set var={'acpr_logging_curator_retention': cust_acpr_logging_curator_retention} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+{% if cust_acpr_logging_fluentd_secure_forward is defined %}
+acpr_logging_fluentd_secure_forward: |
+{{ cust_acpr_logging_fluentd_secure_forward |indent(indentfirst=True) }}
+{% endif %}
+{# If logging pvc size is defined we won't configure local hostpath #}
+acpr_logging_pv_use_hostpath: {{ 'false' if cust_logging_es_pvc_size is defined else 'true' }}
+{% if cust_acpr_logging_hostpath_dir is defined %}
+acpr_logging_hostpath_dir: {{ cust_acpr_logging_hostpath_dir }}
+{% endif %}
+
+{%- if cust_acpr_trusted_cacerts is defined %}
+acpr_trusted_cacerts:
+{% for k,v in cust_acpr_trusted_cacerts.items() %}
+{{k |indent(indentfirst=True)}}: |
+{{v |indent(width=8, indentfirst=True)}}
+{% endfor %}
+{% endif %}
+
+{%- if cust_nfs_shares_directory_path is defined %}
+acpr_nfs_shares_directory_path: {{ cust_nfs_shares_directory_path }}
+{% endif %}
+
+{% if cust_storage is defined %}
+{{ cust_storage | to_yaml }}
+{% endif %}
+
+{%- if cust_sc_definitions is defined %}
+{% set var={'acpr_sc_definitions': cust_sc_definitions} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_http_proxy is defined and cust_https_proxy is defined %}
+acpr_docker_http_proxy: {{ cust_http_proxy }}
+acpr_docker_https_proxy: {{ cust_https_proxy }}
+acpr_docker_no_proxy: {{ cust_no_proxy }}
+{% endif %}
+
+{%- if cust_acpr_database_operator_env is defined %}
+{% set var={'acpr_database_operator_env': cust_acpr_database_operator_env} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_acpr_database_operator_credentials is defined %}
+{% set var={'acpr_database_operator_credentials': cust_acpr_database_operator_credentials} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_acpr_database_operator_oracle_templates is defined %}
+acpr_database_operator_oracle_templates:
+{% for k in cust_acpr_database_operator_oracle_templates %}
+{{k |indent(width=4, indentfirst=True)}}: {{ cust_acpr_database_operator_oracle_templates[k] }}
+{% endfor %}
+{% endif %}
+
+{%- if cust_acpr_database_operator_image is defined %}
+acpr_database_operator_image: {{ cust_acpr_database_operator_image }}
+{% endif %}
+
+{%- if cust_acpr_database_operator_logaccess_groupname is defined %}
+acpr_database_operator_logaccess_groupname: {{ cust_acpr_database_operator_logaccess_groupname }}
+{% endif %}
+
+{%- if cust_acpr_logging_fluentd_image is defined %}
+acpr_logging_fluentd_image: {{ cust_acpr_logging_fluentd_image }}
+{% endif %}
+
+{%- if cust_os_cluster_name is defined %}
+os_cluster_name: {{ cust_os_cluster_name }}
+{% endif %}
+
+{%- if cust_alertmanager_configuration is defined %}
+{% set var={'acpr_monitoring_alertmanager_configuration': cust_alertmanager_configuration} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_twistlock_namespace is defined %}
+twistlock_namespace: {{ cust_twistlock_namespace }}
+{% endif %}
+{%- if cust_twistlock_console_hostname is defined %}
+twistlock_console_hostname: {{ cust_twistlock_console_hostname }}
+{% endif %}
+{%- if cust_twistlock_console_image is defined %}
+twistlock_console_image: {{ cust_twistlock_console_image }}
+{% endif %}
+{%- if cust_twistlock_console_pvc_size is defined %}
+twistlock_console_pvc_size: {{ cust_twistlock_console_pvc_size }}
+{% endif %}
+{%- if cust_twistlock_defender_image is defined %}
+twistlock_defender_image: {{ cust_twistlock_defender_image }}
+{% endif %}
+{%- if cust_twistlock_license_key is defined %}
+twistlock_license_key: {{ cust_twistlock_license_key }}
+{% endif %}
+{%- if cust_twistlock_user is defined %}
+twistlock_user: {{ cust_twistlock_user }}
+{% endif %}
+{%- if cust_twistlock_password is defined %}
+twistlock_password: {{ cust_twistlock_password }}
+{% endif %}
+{%- if cust_twistlock_prometheus_user is defined %}
+twistlock_prometheus_user: {{ cust_twistlock_prometheus_user }}
+{% endif %}
+{%- if cust_twistlock_prometheus_password is defined %}
+twistlock_prometheus_password: {{ cust_twistlock_prometheus_password }}
+{% endif %}
+
+{%- if cust_prismacloud is defined %}
+{% set var={'acpr_prismacloud': cust_prismacloud} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_monitoring_ocp3_rules is defined %}
+acpr_monitoring_ocp3_rules: {{ cust_monitoring_ocp3_rules }}
+{% endif %}
+
+{%- if cust_monitoring_ocp3_node_exporter_compat is defined %}
+acpr_monitoring_ocp3_node_exporter_compat: {{ cust_monitoring_ocp3_node_exporter_compat }}
+{% endif %}
+
+{%- if cust_monitoring_ocp3_prometheus_jobs is defined %}
+acpr_monitoring_ocp3_prometheus_jobs: {{ cust_monitoring_ocp3_prometheus_jobs }}
+{% endif %}
+
+{%- if cust_monitoring_pvs_purge is defined %}
+acpr_monitoring_pvs_purge: {{ cust_monitoring_pvs_purge }}
+{% endif %}
+
+{%- if cust_regenerate_prometheus_password is defined %}
+acpr_monitoring_regenerate_prometheus_password: {{ cust_regenerate_prometheus_password }}
+{% endif %}
+
+{%- if cust_restart_all_monitoring_pods is defined %}
+acpr_monitoring_restart_all_monitoring_pods: {{ cust_restart_all_monitoring_pods }}
+{% endif %}
+
+{%- if cust_grafana_hostname is defined %}
+acpr_monitoring_grafana_hostname: {{ cust_grafana_hostname }}
+{% endif %}
+
+{%- if cust_prometheus_hostname is defined %}
+acpr_monitoring_prometheus_hostname: {{ cust_prometheus_hostname }}
+{% endif %}
+
+{%- if cust_alertmanager_hostname is defined %}
+acpr_monitoring_alertmanager_hostname: {{ cust_alertmanager_hostname }}
+{% endif %}
+
+{%- if cust_grafana_node_selector is defined %}
+acpr_monitoring_grafana_node_selector: {{ cust_grafana_node_selector }}
+{% endif %}
+
+{%- if cust_grafana_persistent_volume_claim is defined %}
+acpr_monitoring_grafana_persistent_volume_claim: {{ cust_grafana_persistent_volume_claim }}
+{% endif %}
+
+{%- if cust_prometheus_node_selector is defined %}
+acpr_monitoring_prometheus_node_selector: {{ cust_prometheus_node_selector }}
+{% endif %}
+
+{%- if cust_prometheus_database_retention is defined %}
+acpr_monitoring_prometheus_database_retention: {{ cust_prometheus_database_retention }}
+{% endif %}
+
+{%- if cust_prometheus_persistent_volume_claim is defined %}
+acpr_monitoring_prometheus_persistent_volume_claim: {{ cust_prometheus_persistent_volume_claim }}
+{% endif %}
+
+{%- if cust_prometheus_node_exporter_resources_request_cpu is defined %}
+acpr_monitoring_prometheus_node_exporter_resources_request_cpu: {{ cust_prometheus_node_exporter_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_node_exporter_resources_request_memory is defined %}
+acpr_monitoring_prometheus_node_exporter_resources_request_memory: {{ cust_prometheus_node_exporter_resources_request_memory }}
+{% endif %}
+
+{%- if cust_prometheus_node_exporter_resources_limit_cpu is defined %}
+acpr_monitoring_prometheus_node_exporter_resources_limit_cpu: {{ cust_prometheus_node_exporter_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_node_exporter_resources_limit_memory is defined %}
+acpr_monitoring_prometheus_node_exporter_resources_limit_memory: {{ cust_prometheus_node_exporter_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_kube_state_metrics_resources_request_cpu is defined %}
+acpr_monitoring_kube_state_metrics_resources_request_cpu: {{ cust_kube_state_metrics_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_kube_state_metrics_resources_request_memory is defined %}
+acpr_monitoring_kube_state_metrics_resources_request_memory: {{ cust_kube_state_metrics_resources_request_memory }}
+{% endif %}
+
+{%- if cust_kube_state_metrics_resources_limit_cpu is defined %}
+acpr_monitoring_kube_state_metrics_resources_limit_cpu: {{ cust_kube_state_metrics_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_kube_state_metrics_resources_limit_memory is defined %}
+acpr_monitoring_kube_state_metrics_resources_limit_memory: {{ cust_kube_state_metrics_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_prometheus_proxy_resources_request_cpu is defined %}
+acpr_monitoring_prometheus_proxy_resources_request_cpu: {{ cust_prometheus_proxy_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_proxy_resources_request_memory is defined %}
+acpr_monitoring_prometheus_proxy_resources_request_memory: {{ cust_prometheus_proxy_resources_request_memory }}
+{% endif %}
+
+{%- if cust_prometheus_proxy_resources_limit_cpu is defined %}
+acpr_monitoring_prometheus_proxy_resources_limit_cpu: {{ cust_prometheus_proxy_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_proxy_resources_limit_memory is defined %}
+acpr_monitoring_prometheus_proxy_resources_limit_memory: {{ cust_prometheus_proxy_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_prometheus_resources_request_cpu is defined %}
+acpr_monitoring_prometheus_resources_request_cpu: {{ cust_prometheus_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_resources_request_memory is defined %}
+acpr_monitoring_prometheus_resources_request_memory: {{ cust_prometheus_resources_request_memory }}
+{% endif %}
+
+{%- if cust_prometheus_resources_limit_cpu is defined %}
+acpr_monitoring_prometheus_resources_limit_cpu: {{ cust_prometheus_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_resources_limit_memory is defined %}
+acpr_monitoring_prometheus_resources_limit_memory: {{ cust_prometheus_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_alertmanager_proxy_resources_request_cpu is defined %}
+acpr_monitoring_alertmanager_proxy_resources_request_cpu: {{ cust_alertmanager_proxy_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_alertmanager_proxy_resources_request_memory is defined %}
+acpr_monitoring_alertmanager_proxy_resources_request_memory: {{ cust_alertmanager_proxy_resources_request_memory }}
+{% endif %}
+
+{%- if cust_alertmanager_proxy_resources_limit_cpu is defined %}
+acpr_monitoring_alertmanager_proxy_resources_limit_cpu: {{ cust_alertmanager_proxy_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_alertmanager_proxy_resources_limit_memory is defined %}
+acpr_monitoring_alertmanager_proxy_resources_limit_memory: {{ cust_alertmanager_proxy_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_alertmanager_resources_request_cpu is defined %}
+acpr_monitoring_alertmanager_resources_request_cpu: {{ cust_alertmanager_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_alertmanager_resources_request_memory is defined %}
+acpr_monitoring_alertmanager_resources_request_memory: {{ cust_alertmanager_resources_request_memory }}
+{% endif %}
+
+{%- if cust_alertmanager_resources_limit_cpu is defined %}
+acpr_monitoring_alertmanager_resources_limit_cpu: {{ cust_alertmanager_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_alertmanager_resources_limit_memory is defined %}
+acpr_monitoring_alertmanager_resources_limit_memory: {{ cust_alertmanager_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_grafana_proxy_resources_request_cpu is defined %}
+acpr_monitoring_grafana_proxy_resources_request_cpu: {{ cust_grafana_proxy_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_grafana_proxy_resources_request_memory is defined %}
+acpr_monitoring_grafana_proxy_resources_request_memory: {{ cust_grafana_proxy_resources_request_memory }}
+{% endif %}
+
+{%- if cust_grafana_proxy_resources_limit_cpu is defined %}
+acpr_monitoring_grafana_proxy_resources_limit_cpu: {{ cust_grafana_proxy_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_grafana_proxy_resources_limit_memory is defined %}
+acpr_monitoring_grafana_proxy_resources_limit_memory: {{ cust_grafana_proxy_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_grafana_resources_request_cpu is defined %}
+acpr_monitoring_grafana_resources_request_cpu: {{ cust_grafana_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_grafana_resources_request_memory is defined %}
+acpr_monitoring_grafana_resources_request_memory: {{ cust_grafana_resources_request_memory }}
+{% endif %}
+
+{%- if cust_grafana_resources_limit_cpu is defined %}
+acpr_monitoring_grafana_resources_limit_cpu: {{ cust_grafana_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_grafana_resources_limit_memory is defined %}
+acpr_monitoring_grafana_resources_limit_memory: {{ cust_grafana_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_provisioner_resources_request_cpu is defined %}
+acpr_monitoring_grafana_dashboard_provisioner_resources_request_cpu: {{ cust_grafana_dashboard_provisioner_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_provisioner_resources_request_memory is defined %}
+acpr_monitoring_grafana_dashboard_provisioner_resources_request_memory: {{ cust_grafana_dashboard_provisioner_resources_request_memory }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_provisioner_resources_limit_cpu is defined %}
+acpr_monitoring_grafana_dashboard_provisioner_resources_limit_cpu: {{ cust_grafana_dashboard_provisioner_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_provisioner_resources_limit_memory is defined %}
+acpr_monitoring_grafana_dashboard_provisioner_resources_limit_memory: {{ cust_grafana_dashboard_provisioner_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_prometheus_rule_provisioner_resources_request_cpu is defined %}
+acpr_monitoring_prometheus_rule_provisioner_resources_request_cpu: {{ cust_prometheus_rule_provisioner_resources_request_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_rule_provisioner_resources_request_memory is defined %}
+acpr_monitoring_prometheus_rule_provisioner_resources_request_memory: {{ cust_prometheus_rule_provisioner_resources_request_memory }}
+{% endif %}
+
+{%- if cust_prometheus_ruled_provisioner_resources_limit_cpu is defined %}
+acpr_monitoring_prometheus_ruled_provisioner_resources_limit_cpu: {{ cust_prometheus_ruled_provisioner_resources_limit_cpu }}
+{% endif %}
+
+{%- if cust_prometheus_rule_provisioner_resources_limit_memory is defined %}
+acpr_monitoring_prometheus_rule_provisioner_resources_limit_memory: {{ cust_prometheus_rule_provisioner_resources_limit_memory }}
+{% endif %}
+
+{%- if cust_prometheus_node_exporter_resources_enable is defined %}
+acpr_monitoring_prometheus_node_exporter_resources_enable: {{ cust_prometheus_node_exporter_resources_enable }}
+{% endif %}
+
+{%- if cust_kube_state_metrics_resources_enable is defined %}
+acpr_monitoring_kube_state_metrics_resources_enable: {{ cust_kube_state_metrics_resources_enable }}
+{% endif %}
+
+{%- if cust_prometheus_proxy_resources_enable is defined %}
+acpr_monitoring_prometheus_proxy_resources_enable: {{ cust_prometheus_proxy_resources_enable }}
+{% endif %}
+
+{%- if cust_prometheus_resources_request_enable is defined %}
+acpr_monitoring_prometheus_resources_request_enable: {{ cust_prometheus_resources_request_enable }}
+{% endif %}
+
+{%- if cust_alertmanager_proxy_resources_enable is defined %}
+acpr_monitoring_alertmanager_proxy_resources_enable: {{ cust_alertmanager_proxy_resources_enable }}
+{% endif %}
+
+{%- if cust_alertmanager_resources_enable is defined %}
+acpr_monitoring_alertmanager_resources_enable: {{ cust_alertmanager_resources_enable }}
+{% endif %}
+
+{%- if cust_grafana_proxy_resources_enable is defined %}
+acpr_monitoring_grafana_proxy_resources_enable: {{ cust_grafana_proxy_resources_enable }}
+{% endif %}
+
+{%- if cust_grafana_resources_enable is defined %}
+acpr_monitoring_grafana_resources_enable: {{ cust_grafana_resources_enable }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_provisioner_resources_enable is defined %}
+acpr_monitoring_grafana_dashboard_provisioner_resources_enable: {{ cust_grafana_dashboard_provisioner_resources_enable }}
+{% endif %}
+
+{%- if cust_prometheus_rule_provisioner_resources_enable is defined %}
+acpr_monitoring_prometheus_rule_provisioner_resources_enable: {{ cust_prometheus_rule_provisioner_resources_enable }}
+{% endif %}
+
+{%- if cust_prometheus_rule_provisioner_image is defined %}
+acpr_monitoring_prometheus_rule_provisioner_image: {{ cust_prometheus_rule_provisioner_image }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_provisioner_image is defined %}
+acpr_monitoring_grafana_dashboard_provisioner_image: {{ cust_grafana_dashboard_provisioner_image }}
+{% endif %}
+
+{%- if cust_prometheus_node_exporter_image is defined %}
+acpr_monitoring_prometheus_node_exporter_image: {{ cust_prometheus_node_exporter_image }}
+{% endif %}
+
+{%- if cust_kube_state_metrics_image is defined %}
+acpr_monitoring_kube_state_metrics_image: {{ cust_kube_state_metrics_image }}
+{% endif %}
+
+{%- if cust_oauth_proxy_image is defined %}
+acpr_monitoring_oauth_proxy_image: {{ cust_oauth_proxy_image }}
+{% endif %}
+
+{%- if cust_prometheus_image is defined %}
+acpr_monitoring_prometheus_image: {{ cust_prometheus_image }}
+{% endif %}
+
+{%- if cust_alertmanager_image is defined %}
+acpr_monitoring_alertmanager_image: {{ cust_alertmanager_image }}
+{% endif %}
+
+{%- if cust_grafana_dashboard_image is defined %}
+acpr_grafana_dashboard_image: {{ cust_grafana_dashboard_image }}
+{% endif %}
+
+{%- if cust_grafana_pvc_size_request_log is defined %}
+acpr_monitoring_grafana_pvc_size_request_log: {{ cust_grafana_pvc_size_request_log }}
+{% endif %}
+
+{%- if cust_grafana_pvc_size_request_library is defined %}
+acpr_monitoring_grafana_pvc_size_request_library: {{ cust_grafana_pvc_size_request_library }}
+{% endif %}
+
+{%- if cust_grafana_pvc_size_request_dashboard is defined %}
+acpr_monitoring_grafana_pvc_size_request_dashboard: {{ cust_grafana_pvc_size_request_dashboard }}
+{% endif %}
+
+{%- if cust_prometheus_pvc_size_request_data is defined %}
+acpr_monitoring_prometheus_pvc_size_request_data: {{ cust_prometheus_pvc_size_request_data }}
+{% endif %}
+
+{%- if cust_prometheus_pvc_size_request_rule is defined %}
+acpr_monitoring_prometheus_pvc_size_request_rule: {{ cust_prometheus_pvc_size_request_rule }}
+{% endif %}
+
+{%- if cust_prometheus_additional_network_policy_namespace_selector is defined %}
+{% set var={'acpr_monitoring_prometheus_additional_network_policy_namespace_selector': cust_prometheus_additional_network_policy_namespace_selector} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_prometheus_additional_jobs is defined %}
+acpr_monitoring_prometheus_additional_jobs: |
+{{ cust_prometheus_additional_jobs | indent(indentfirst=True) }}
+{% endif %}
+
+{%- if cust_grafana_pvc_storage_class_name_log is defined %}
+acpr_monitoring_grafana_pvc_storage_class_name_log: {{ cust_grafana_pvc_storage_class_name_log }}
+{% endif %}
+
+{%- if cust_grafana_pvc_storage_class_name_library is defined %}
+acpr_monitoring_grafana_pvc_storage_class_name_library: {{ cust_grafana_pvc_storage_class_name_library }}
+{% endif %}
+
+{%- if cust_grafana_pvc_storage_class_name_dashboard is defined %}
+acpr_monitoring_grafana_pvc_storage_class_name_dashboard: {{ cust_grafana_pvc_storage_class_name_dashboard }}
+{% endif %}
+
+{%- if cust_prometheus_pvc_storage_class_name_data is defined %}
+acpr_monitoring_prometheus_pvc_storage_class_name_data: {{ cust_prometheus_pvc_storage_class_name_data }}
+{% endif %}
+
+{%- if cust_prometheus_pvc_storage_class_name_rule is defined %}
+acpr_monitoring_prometheus_pvc_storage_class_name_rule: {{ cust_prometheus_pvc_storage_class_name_rule }}
+{% endif %}
+
+{%- if cust_monitoring_cluster_name is defined %}
+acpr_monitoring_cluster_name: {{ cust_monitoring_cluster_name }}
+{% endif %}
+
+{%- if cust_prometheus_password is defined %}
+acpr_monitoring_prometheus_password: {{ cust_prometheus_password }}
+{% endif %}
+
+{%- if cust_prometheus_pvc_access_modes_data is defined %}
+{% set var={'acpr_monitoring_prometheus_pvc_access_modes_data': cust_prometheus_pvc_access_modes_data} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_alertmanager_additional_auth is defined %}
+{% set var={'acpr_monitoring_alertmanager_additional_auth': cust_alertmanager_additional_auth} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_prometheus_additional_auth is defined %}
+{% set var={'acpr_monitoring_prometheus_additional_auth': cust_prometheus_additional_auth} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_acpr_oauthclient_operator_image is defined %}
+acpr_oauthclient_operator_image: {{ cust_acpr_oauthclient_operator_image }}
+{% endif %}
+
+{% if cust_machineconfig is defined %}
+{% set var={'acpr_machineconfig': cust_machineconfig} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if acpr_sealed_secrets_operator is defined %}
+{% set var={'acpr_sealed_secrets_operator': acpr_sealed_secrets_operator} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- raw %}
+ose_install_packages:
+  - "openshift-ansible{{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] }}"
+  - "openshift-ansible-docs{{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] }}"
+  - "openshift-ansible-playbooks{{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] }}"
+  - "openshift-ansible-roles{{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] }}"
+  - "atomic-openshift-clients{{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] }}"
+{% endraw %}
+
+acpr_container_images_signature_verification: {{ cust_container_images_signature_verification }}
+acpr_docker_signature_verification:  {{ cust_container_images_signature_verification }}
+acpr_atomic_default_trust_policy: {{ 'reject' if cust_container_images_signature_verification | bool else 'accept' }}
+
+{% if cust_docker_additional_registries is defined %}
+{% set cust_container_images_registries=cust_docker_additional_registries %}
+{% endif %}
+
+{%- if cust_administration_container_images_registries is defined %}
+{% set var={'acpr_administration_container_images_registries': cust_administration_container_images_registries} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_container_images_registries is defined %}
+{% set var={'acpr_container_images_registries': cust_container_images_registries} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_prepull_container_registry is defined %}
+{% set var={'acpr_prepull_container_registry': cust_prepull_container_registry} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_branding_configuration is defined %}
+{% set var={'acpr_branding_configuration': cust_branding_configuration} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_master_identity_providers is not defined and cust_master_htpasswd_file is not defined and cust_master_identity_admin_users is not defined %}
+acpr_default_cluster_admins:
+- acpr
+{% elif cust_master_identity_admin_users is defined %}
+{% set var={'acpr_default_cluster_admins': cust_master_identity_admin_users} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_projecttemplate is defined %}
+{# Loop through key `rolebinding` and select resources of kind `RoleBinding` #}
+{% if cust_projecttemplate.rolebinding is defined %}
+{% set o = [] %}
+{% for rb in cust_projecttemplate.rolebinding|selectattr("kind","search", "^RoleBinding$") %}
+{{ o.append(rb) }}
+{% endfor %}
+{# Update cust_projecttemplate.rolebinding with filtered input #}
+{% set _dummy = cust_projecttemplate.update({'rolebinding':o}) %}
+{% endif %}
+
+{# Loop through key `networkpolicy` and select resources of kind `NetworkPolicy` #}
+{% if cust_projecttemplate.networkpolicy is defined %}
+{% set o = [] %}
+{% for np in cust_projecttemplate.networkpolicy|selectattr("kind","search", "^NetworkPolicy$") %}
+{{ o.append(np) }}
+{% endfor %}
+
+{# Update cust_projecttemplate.networkpolicy with filtered input #}
+{% set _dummy = cust_projecttemplate.update({'networkpolicy':o}) %}
+{% endif %}
+
+{# Write generated dictionary #}
+{% set var={'acpr_projecttemplate': cust_projecttemplate} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{%- if cust_self_provisioners is defined %}
+acpr_self_provisioners: {{ cust_self_provisioners}}
+{% endif %}
+
+{% if cust_master_identity_providers is defined %}
+{% set var={'acpr_master_identity_providers': cust_master_identity_providers} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{% if cust_cluster_credentials is defined %}
+{% set var={'acpr_cluster_credentials': cust_cluster_credentials} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_egress_node_label is defined %}
+acpr_egress_node_label: {{ cust_egress_node_label }}
+{% elif cust_os_version is version('4.0.0', '>=') %}
+acpr_egress_node_label: 'acpr.avaloq.com/egress-node'
+{% else %}
+acpr_egress_node_label: 'node-role.kubernetes.io/infra=true'
+{% endif %}
+
+{%- if cust_egress_cidr is defined %}
+acpr_egress_cidr: {{ cust_egress_cidr }}
+{% endif %}
+
+{%- if cust_egress is defined %}
+{% set var={'acpr_egress': cust_egress} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{%- if cust_constellations_path is not none and cust_constellations_path is defined %}
+acpr_constellations_path: {{ cust_constellations_path }}
+{% endif %}
+
+{%- if cust_use_constellations is defined %}
+{% set var={'acpr_use_constellations': cust_use_constellations} %}
+{{ var |to_nice_yaml }}
+{% else %}
+acpr_use_constellations: []
+{% endif %}
+
+{%- if cust_ntp_servers is defined %}
+{% set var={'acpr_ntp_servers': cust_ntp_servers} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{# OCP 4 #}
+{% if cust_serve_ignition_files is defined %}
+acpr_serve_ignition_files: {{ cust_serve_ignition_files }}
+{% endif %}
+
+{%- if cust_openshift_installer_url is defined %}
+acpr_openshift_installer_url: {{ cust_openshift_installer_url }}
+{% endif %}
+
+{%- if cust_openshift_installer_manage is defined %}
+acpr_openshift_installer_manage: {{ cust_openshift_installer_manage }}
+{% endif %}
+
+{%- if cust_openshift_client_url is defined %}
+acpr_openshift_client_url: {{ cust_openshift_client_url }}
+{% endif %}
+
+{%- if cust_openshift_client_manage is defined %}
+acpr_openshift_client_manage: {{ cust_openshift_client_manage }}
+{% endif %}
+
+{%- if cust_os_def_subdomain is defined %}
+acpr_os_def_subdomain: {{ cust_os_def_subdomain }}
+{% endif %}
+
+{%- if cust_webserver is defined %}
+{% set var={'acpr_webserver': cust_webserver} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{%- if cust_webserver_ignition_file_path is defined %}
+acpr_webserver_ignition_file_path: {{ cust_webserver_ignition_file_path }}
+{% endif %}
+
+{%- if cust_clus_net_cidr is defined %}
+acpr_clus_net_cidr: {{ cust_clus_net_cidr }}
+{% endif %}
+
+{%- if cust_clus_subnet_length is defined %}
+acpr_clus_subnet_length: {{ cust_clus_subnet_length }}
+{% endif %}
+
+{%- if cust_clus_portal_cidr is defined %}
+acpr_clus_portal_cidr: {{ cust_clus_portal_cidr }}
+{% endif %}
+
+{% if cust_pull_secret is defined %}
+acpr_pull_secret: {{ cust_pull_secret }}
+{% else %}
+acpr_pull_secret:
+  auths:
+{% for k, v in cust_container_images_registries.items() | sort %}
+    {{ v['host'] }}:
+{% if v['username'] is defined and v['password'] is defined %}
+      auth: "{{ (v['username'] + ':' + v['password'] | string) | b64encode }}"
+{% else %}
+      auth: null
+{% endif %}
+      email: null
+{% endfor %}
+{% endif %}
+
+
+{%- if cust_ssh_publickey is defined %}
+acpr_ssh_publickey: {{ cust_ssh_publickey }}
+{% endif %}
+
+{%- if cust_registry_location is defined %}
+acpr_registry_location: {{ cust_registry_location }}
+{% endif %}
+
+{%- if cust_operatorhub_catalogsources is defined %}
+{% set var={'acpr_operatorhub_catalogsources': cust_operatorhub_catalogsources} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{%- if cust_operatorhub_operators is defined %}
+{% set var={'acpr_operatorhub_operators': cust_operatorhub_operators} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_container_images_mirrors is defined %}
+{% set var={'acpr_container_images_mirrors': cust_container_images_mirrors} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{%- if cust_cluster_remove_kubeadmin is defined %}
+acpr_cluster_remove_kubeadmin: {{ cust_cluster_remove_kubeadmin }}
+{% endif %}
+
+{% if cust_platform is defined %}
+{% set var={'acpr_platform': cust_platform} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_cluster_nodes is defined %}
+{% set var={'acpr_cluster_nodes': cust_cluster_nodes} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_cluster_certificates is defined %}
+{% set var={'acpr_cluster_certificates': cust_cluster_certificates} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_master_htpasswd_file is defined %}
+acpr_master_htpasswd_file: {{ cust_master_htpasswd_file }}
+{% endif %}
+
+{% if cust_backup_node is defined %}
+acpr_backup_node: {{ cust_backup_node }}
+{% endif %}
+
+{% if cust_backup_node_ssh_key is defined %}
+{% set var={'acpr_backup_node_ssh_key': cust_backup_node_ssh_key} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_hpe_csi_driver is defined %}
+{% set var={'acpr_hpe_csi_driver': cust_hpe_csi_driver} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_console_links is defined %}
+{% set var={'acpr_console_links': cust_console_links} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_console_notifications is defined %}
+{% set var={'acpr_console_notifications': cust_console_notifications} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_console_motd is defined %}
+acpr_console_motd: '{{ cust_console_motd }}'
+{% endif %}
+
+{% if cust_additional_fluentd_daemonset is defined %}
+{% set var={'acpr_additional_fluentd_daemonset': cust_additional_fluentd_daemonset} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{% if cust_cluster is defined %}
+{% set var={'acpr_cluster': cust_cluster} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{% if cust_kubeletconfig is defined %}
+{% set var={'acpr_kubeletconfig': cust_kubeletconfig} %}
+{{ var |to_nice_yaml }}
+{% endif %}
+
+{%- if cust_istio is defined %}
+{% set var={'acpr_istio': cust_istio} %}
+{{ var |to_nice_yaml}}
+{% endif %}
+
+{%- if cust_imagepruner is defined %}
+{% set var={'acpr_imagepruner': cust_imagepruner} %}
+{{ var |to_nice_yaml}}
+{% endif %}

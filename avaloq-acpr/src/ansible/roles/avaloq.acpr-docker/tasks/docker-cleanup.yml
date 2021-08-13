@@ -1,0 +1,54 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Docker housekeeping
+  become: true
+  block:
+    - name: "{{ acpr_docker_cleanup_base }}/bin directory is created"
+      file:
+        path: "{{ acpr_docker_cleanup_base }}/bin"
+        owner: root
+        group: root
+        mode: 0750
+        state: directory
+
+    - name: docker housekeeping files are deployed
+      copy:
+        src: dockercleanup.sh
+        dest: '{{ acpr_docker_cleanup_base }}/bin/dockercleanup.sh'
+        owner: root
+        group: root
+        mode: '0750'
+
+    - name: docker housekeeping systemd services are deployed
+      template:
+        src: "{{ item }}.j2"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: "0640"
+      loop:
+        - dockercleanup.service
+        - dockercleanup.timer
+      notify:
+        - reload systemd
+
+    - name: docker housekeeping systemd service are configured
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      with_items:
+        - dockercleanup.service
+        - dockercleanup.timer

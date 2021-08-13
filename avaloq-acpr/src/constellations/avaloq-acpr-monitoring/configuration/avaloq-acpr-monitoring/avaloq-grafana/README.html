@@ -1,0 +1,351 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_VERSION</td>
+<td>OpenShift version where this constellation is deployed to. Valid values are 3 or 4.</td>
+<td>true</td>
+<td>4</td>
+</tr>
+<tr>
+<td>OPENSHIFT_NAMESPACE</td>
+<td>The namespace used on Openshift where this constellation is deployed to.</td>
+<td>true</td>
+<td>acpr-monitoring</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DEPLOY_SECRET</td>
+<td>Set to 'false' if you don't want to deploy secrets. It can be useful when using Sealed Secrets</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_ALERTS</td>
+<td>Enables or disable deploy of Grafana alerts</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DEPLOY_PVC</td>
+<td>Set to 'false' if you don't want to deploy PVCs</td>
+<td>true</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_SESSION_SECRET</td>
+<td>Secret string used to encrypt sessions</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry containing the Red Hat images. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>false</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_SHOW_HTPASSWD_FORM</td>
+<td>Show or hide htpasswd form in Grafana proxy</td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_CONTAINER_IMAGE_PULL_POLICY</td>
+<td>The pull policy to use for the container image. Valid values are <code>IfNotPresent</code> and <code>Always</code>, default is <code>IfNotPresent</code>.</td>
+<td>false</td>
+<td>IfNotPresent</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_ROUTE_HOSTNAME</td>
+<td>Select a hostname to use to access Grafana. If empty, OpenShift generates the hostname automatically.</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_REPLICAS</td>
+<td>Number of replicas of Grafana deployment</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_CONTAINER_IMAGE</td>
+<td>Container image of Grafana</td>
+<td>false</td>
+<td>openshift3/grafana:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PROXY_CONTAINER_IMAGE</td>
+<td>Container image of Grafana proxy</td>
+<td>false</td>
+<td>openshift3/oauth-proxy:v3.11.465</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_NODE_SELECTOR_KEY</td>
+<td>Specify a node where Grafana is deployed</td>
+<td>false</td>
+<td>dummySelector</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_NODE_SELECTOR_VALUE</td>
+<td>Specify a node where Grafana is deployed</td>
+<td>false</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_VOLUME_HOSTPATH_LIBRARY</td>
+<td>Grafana hostpath path for lib/ folder</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_VOLUME_HOSTPATH_DASHBOARD</td>
+<td>Grafana hostpath path for dashboards folder</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_SECURITYCONTEXT_PRIVILEGED</td>
+<td></td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_SECURITYCONTEXT_RUNASUSER</td>
+<td>Grafana prviledged user id</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PVC_STORAGE_REQUEST_LIBRARY</td>
+<td>Grafana storage request for storing libraries (i.e. sqlite database)</td>
+<td>false</td>
+<td>1Gi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PVC_STORAGE_CLASSNAME_LIBRARY</td>
+<td>Grafana PersitentVolumeClaim library storage class name</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PVC_STORAGE_ACCESSMODE_LIBRARY</td>
+<td>Grafana PersitentVolumeClaim library access mode</td>
+<td>false</td>
+<td>ReadWriteOnce</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PVC_STORAGE_REQUEST_DASHBOARD</td>
+<td>Grafana storage request for storing dashboards</td>
+<td>false</td>
+<td>1Gi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PVC_STORAGE_CLASSNAME_DASHBOARD</td>
+<td>Grafana PersitentVolumeClaim log storage class name</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PVC_STORAGE_ACCESSMODE_DASHBOARD</td>
+<td>Grafana PersitentVolumeClaim dashboards access mode</td>
+<td>false</td>
+<td>ReadWriteMany</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PODANTIAFFINITY_TOPOLOGY_KEY</td>
+<td>Grafana pod antiaffinity topology key</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_RESOURCES_LIMIT_CPU</td>
+<td>Grafana CPU limit</td>
+<td>false</td>
+<td>200m</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_RESOURCES_REQUEST_CPU</td>
+<td>Grafana memory request</td>
+<td>false</td>
+<td>75m</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_RESOURCES_LIMIT_MEMORY</td>
+<td>Grafana memory limit</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_RESOURCES_REQUEST_MEMORY</td>
+<td>Grafana memory request</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PROXY_RESOURCES_LIMIT_CPU</td>
+<td>Grafana proxy CPU limit</td>
+<td>false</td>
+<td>50m</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PROXY_RESOURCES_REQUEST_CPU</td>
+<td>Grafana proxy CPU request</td>
+<td>false</td>
+<td>10m</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PROXY_RESOURCES_LIMIT_MEMORY</td>
+<td></td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_PROXY_RESOURCES_REQUEST_MEMORY</td>
+<td>Grafana proxy memory request</td>
+<td>false</td>
+<td>256Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_CONTAINER_IMAGE</td>
+<td></td>
+<td>false</td>
+<td>avaloq/avaloq-grafana-dashboard-provisioner:0.6.4</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_ADDITIONAL_DASHBOARD_TYPES</td>
+<td>Additional dashboard types processed by this provisioner. Every name must start with comma. For instance ',custom1,custom2'</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_REPLICAS</td>
+<td>Number of replicas of Grafana Dashboard Provisioner</td>
+<td>false</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_NODE_SELECTOR_KEY</td>
+<td></td>
+<td>false</td>
+<td>dummySelector</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_NODE_SELECTOR_VALUE</td>
+<td>Specify a node where Grafana Dashboard is deployed</td>
+<td>false</td>
+<td>true</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_VOLUME_HOSTPATH_DASHBOARD</td>
+<td>Grafana Dashboard Provisioner hostpath for dashboards</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_SECURITYCONTEXT_PRIVILEGED</td>
+<td>Run Grafana Dashboard Provisioner as a privileged user</td>
+<td>false</td>
+<td>false</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_SECURITYCONTEXT_RUNASUSER</td>
+<td>Grafana Dashboard Provisioner prviledged user id</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_PODANTIAFFINITY_TOPOLOGY_KEY</td>
+<td>Grafana Dashboard provsioner pod antiaffinity topology configuration</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_RESOURCES_REQUEST_CPU</td>
+<td>Grafana Dashboard Provisioner CPU request</td>
+<td>false</td>
+<td>25m</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_RESOURCES_LIMIT_MEMORY</td>
+<td>Grafana Dashboard Provisioner memory limit</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_RESOURCES_REQUEST_MEMORY</td>
+<td>Grafana Dashboard Provisioner memory request</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_RESOURCES_LIMIT_CPU</td>
+<td>Grafana Dashboard Provisioner CPU limit</td>
+<td>false</td>
+<td>200m</td>
+</tr>
+<tr>
+<td>AVALOQ_GRAFANA_DASHBOARD_PROVISIONER_LOGGING_LEVELS</td>
+<td>Comma-separated list of custom logging levels per logger. Logger names must be written in snake_case, logging levels as defined by log4j2. Example: &quot;COM_AVALOQ=WARN,ORG_THIRDPARTY=ERROR&quot;</td>
+<td>false</td>
+<td>LOGGING_LEVEL=info</td>
+</tr>
+</tbody>
+</table>
+<h1>AvaloqFiles</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>grafana-configuration/htpasswd</td>
+<td></td>
+<td>true</td>
+<td><a href="../../../output/definitions/com.avaloq/avaloq-grafana/grafana-configuration/htpasswd">htpasswd</a></td>
+</tr>
+<tr>
+<td>grafana-configuration/grafana-datasource.yml</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/avaloq-grafana/grafana-configuration/grafana-datasource.yml">grafana-datasource.yml</a></td>
+</tr>
+<tr>
+<td>grafana-configuration/additional-dashboard-provisioning.yaml</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/avaloq-grafana/grafana-configuration/additional-dashboard-provisioning.yaml">additional-dashboard-provisioning.yaml</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> The default values for AvaloqFiles (if any) are present after running the <code>fetch</code> command.</p>

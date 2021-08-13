@@ -1,0 +1,73 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+#
+# The tasks in this include_task detect whether the configuration is 
+# an all-in-one (AIO) confifuration, i.e., a configuration with a single 
+# host, call it aio_host_name, that is common to the three groups:
+#
+#  cust_master_hosts:
+#  - { fqdn: <aio_host_name> }
+#
+#  cust_infra_hosts:
+#  - { fqdn: <aio_host_name> }
+#
+#  cust_worker_hosts:
+#  - { fqdn: <aio_host_name> }
+#
+#
+# The configuration is AIO if both these conditions are met:
+#
+#  1. each of the groups above contains one host
+#
+#      len(cust_master_hosts) == len(cust_worker_hosts) == len(cust_infra_hosts) == 1
+#
+#
+#  2. the host name is the same in all three groups:
+#
+#      ( cust_master_hosts[0].fqdn == cust_worker_hosts[0].fqdn ) and 
+#      ( cust_master_hosts[0].fqdn == cust_infra_hosts[0].fqdn )
+#
+#
+- name: Get len(cust_master_hosts)
+  set_fact:
+    num_master_hosts: "{{ cust_master_hosts|length }}"
+  when: (cust_master_hosts is defined)
+
+- name: Get len(cust_worker_hosts)
+  set_fact:
+    num_worker_hosts: "{{ cust_worker_hosts|length }}"
+  when: (cust_worker_hosts is defined)
+
+- name: Get len(cust_infra_hosts)
+  set_fact:
+    num_infra_hosts: "{{ cust_infra_hosts|length }}"
+  when: (cust_infra_hosts is defined)
+
+- name: Set All-in-one configuration
+  set_fact:
+    all_in_one_config: true
+  when: >
+     (
+       (num_master_hosts == "1")
+       and (num_worker_hosts == "1")
+       and (num_infra_hosts == "1")
+       and ( cust_master_hosts[0].fqdn == cust_worker_hosts[0].fqdn )
+       and ( cust_master_hosts[0].fqdn == cust_infra_hosts[0].fqdn )
+     )
+
+- name: Show AIO detection result
+  debug:
+    msg: Detected an all-in-one configuration
+  when: all_in_one_config

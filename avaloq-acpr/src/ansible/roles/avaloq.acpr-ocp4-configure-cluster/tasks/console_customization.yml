@@ -1,0 +1,79 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Fail if link type is invalid
+  fail:
+    msg: "Link type {{ item.key }} is invalid"
+  when:
+    - acpr_console_links is defined
+    - item.key not in ['ApplicationMenu', 'HelpMenu']
+  loop: '{{ acpr_console_links|dict2items }}'
+
+- name: Create ACPR OpenShift ConsoleLinks
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    kind: ConsoleLink
+    state: present
+    definition: "{{ lookup('template', 'console-link.yml.j2') }}"
+  vars:
+   console_links: '{{ avq_console_links }}'
+
+# Unfortunately the combine filter doesn't work with our data structure. Therefore we simply run the template twice with a different input
+- name: Create custom OpenShift ConsoleLinks
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    kind: ConsoleLink
+    state: present
+    definition: "{{ lookup('template', 'console-link.yml.j2') }}"
+  vars:
+   console_links: '{{ acpr_console_links }}'
+  when: acpr_console_links is defined
+
+- name: Fail if notification location is invalid
+  fail:
+    msg: "Notification location {{ item.key }} is invalid"
+  when:
+    - acpr_console_notifications is defined
+    - item.key not in ['BannerTop', 'BannerBottom', 'BannerTopBottom']
+  loop: '{{ acpr_console_notifications|dict2items }}'
+
+- name: Create OpenShift Console notifications
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    definition: "{{ lookup('template', 'console-notification.yml.j2') }}"
+  when: acpr_console_notifications is defined
+
+- name: Create OpenShift Message of the day (CLI)
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: v1
+    kind: ConfigMap
+    state: present
+    name: motd
+    namespace: openshift
+    definition:
+      labels:
+        app.kubernetes.io/managed-by: avaloq-acpr
+      data:
+        message: '{{ acpr_console_motd }}'
+  when: acpr_console_motd is defined

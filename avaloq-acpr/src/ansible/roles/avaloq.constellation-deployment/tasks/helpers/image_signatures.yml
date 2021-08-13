@@ -1,0 +1,131 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Set `image` variable
+  set_fact:
+    image: "{% if element | regex_findall('/') | length == 1 %}{{ acd_registry_url }}/{{ element }}{% else %}{{ element }}{% endif %}"
+
+- name: Get image digest
+  command: 'skopeo inspect {% if acd_registry_username is not none and acd_registry_password is not none %}--creds {{ acd_registry_username }}:{{ acd_registry_password }}{% else %}--no-creds{% endif %} docker://{{ image }}'
+  environment:
+    http_proxy: "{{ acd_http_proxy|default(lookup('env', 'http_proxy')) }}"
+    https_proxy: "{{ acd_https_proxy|default(lookup('env', 'https_proxy')) }}"
+    no_proxy: "{{ acd_no_proxy|default(lookup('env', 'no_proxy')) }}"
+  register: digest_output
+  changed_when: False
+  failed_when: '"Digest" not in digest_output.stdout | to_json'
+
+- name: Format `digest_output` variable
+  set_fact:
+    digest_output: "{{ digest_output.stdout | from_json }}"
+
+- name: Set `digest` variable
+  set_fact:
+    digest: "{{ image.split('/')[-1].split(':')[0] }}@{{ digest_output['Digest'] | replace(':', '=') }}"
+
+- name: Create temporary directory for storing signatures
+  tempfile:
+    state: directory
+    suffix: "{{ digest }}"
+  register: tmp_directory
+  changed_when: False
+
+- name: Get image manifest
+  get_url:
+    url: "{% set _url = 'https://' + image.split(':')[0] %}{{ _url | urlsplit('scheme') }}://{{ _url | urlsplit('hostname') }}/v2{{ _url | urlsplit('path') }}/manifests/{{ digest_output['Digest'] }}"
+    dest: "{{ tmp_directory.path }}/manifest"
+    force_basic_auth: "{% if acd_signature_sigstore_username is not none and acd_signature_sigstore_password is not none %}true{% else %}false{% endif %}"
+    username: "{{ acd_signature_sigstore_username }}"
+    password: "{{ acd_signature_sigstore_password }}"
+  environment:
+    http_proxy: "{{ acd_http_proxy|default(lookup('env', 'http_proxy')) }}"
+    https_proxy: "{{ acd_https_proxy|default(lookup('env', 'https_proxy')) }}"
+    no_proxy: "{{ acd_no_proxy|default(lookup('env', 'no_proxy')) }}"
+  changed_when: False
+  register: output
+  failed_when: output.status_code != 200
+
+- name: Get all available signatures
+  uri:
+    url: "{{ acd_signature_sigstore }}/{{ image.split('/')[-2] }}/{{ digest }}/"
+    return_content: yes
+    method: GET
+    user: "{{ acd_signature_sigstore_username }}"
+    password: "{{ acd_signature_sigstore_password }}"
+    force_basic_auth: "{% if acd_signature_sigstore_username is not none and acd_signature_sigstore_password is not none %}true{% else %}false{% endif %}"
+  environment:
+    http_proxy: "{{ acd_http_proxy|default(lookup('env', 'http_proxy')) }}"
+    https_proxy: "{{ acd_https_proxy|default(lookup('env', 'https_proxy')) }}"
+    no_proxy: "{{ acd_no_proxy|default(lookup('env', 'no_proxy')) }}"
+  failed_when: signatures.status != 200
+  changed_when: False
+  register: signatures
+
+- name: Download all signatures
+  get_url:
+    url: "{{ acd_signature_sigstore }}/{{ image.split('/')[-2] }}/{{ digest }}//{{ item }}"
+    dest: "{{ tmp_directory.path }}"
+    force_basic_auth: "{% if acd_signature_sigstore_username is not none and acd_signature_sigstore_password is not none %}true{% else %}false{% endif %}"
+    username: "{{ acd_signature_sigstore_username }}"
+    password: "{{ acd_signature_sigstore_password }}"
+  environment:
+    http_proxy: "{{ acd_http_proxy|default(lookup('env', 'http_proxy')) }}"
+    https_proxy: "{{ acd_https_proxy|default(lookup('env', 'https_proxy')) }}"
+    no_proxy: "{{ acd_no_proxy|default(lookup('env', 'no_proxy')) }}"
+  changed_when: False
+  register: output
+  failed_when: output.status_code != 200
+  loop: "{{ signatures.content | regex_findall('signature-[0-9]{1,}') | unique }}"
+
+- name: Save all public keys to a files
+  copy:
+    dest: "{{ tmp_directory.path }}/{{ item | hash('sha1') }}"
+    content: "{{ item }}"
+  loop: "{{ acd_signature_pubkeys }}"
+  changed_when: False
+
+- name: Import all public keys to GPG
+  command: "gpg --with-fingerprint {{ tmp_directory.path }}/{{ item | hash('sha1') }}"
+  register: output
+  changed_when: False
+  loop: "{{ acd_signature_pubkeys }}"
+
+- name: Save all required fingerprints
+  set_fact:
+    fingerprints: "{{ fingerprints | default([]) }} + [ '{{ item.1.split('=')[1] | replace(' ','') }}' ]"
+  loop: "{{ lookup('subelements', output.results, 'stdout_lines', {'skip_missing': True}) }}"
+  when: "item.1 | regex_search('Key fingerprint =')"
+
+- name: Put fingerprints to a list together with signatures
+  set_fact:
+    fingerprints_and_signatures: "{{ fingerprints_and_signatures|default([]) + [ {'name': item, 'fingerprints': fingerprints} ] }}"
+  loop: "{{ lookup('fileglob', tmp_directory.path + '/signature-*', wantlist=True) }}"
+
+- name: Validate signatures
+  command: "skopeo standalone-verify {{ tmp_directory.path }}/manifest {{ image }} {{ item.1 }} {{ item.0.name }}"
+  loop: "{{ lookup('subelements', fingerprints_and_signatures, 'fingerprints', {'skip_missing': True}, wantlist=True) }}"
+  changed_when: False
+  failed_when: False
+  register: output
+
+- name: Delete temporary folder
+  file:
+    path: "{{ tmp_directory.path }}"
+    state: absent
+  changed_when: False
+
+- name: Fail if none of signature has not been verified
+  fail:
+    msg: "Signature for image '{{ image }}' doesn't exist."
+  when: "not output | string | regex_search('Signature verified')"

@@ -1,0 +1,31 @@
+---
+- name: Get docker images for each node
+  block:
+    - block:
+        - command: "docker images -a  --format '{% raw %}{{ .Repository }},{{ .Tag }},{{ .Size }}{% endraw %}'"
+          register: docker_images
+          changed_when: false
+          failed_when: false
+
+        - lineinfile:
+            create: yes
+            line: "{{ item }}"
+            path: "{{ workdir }}/{{ inventory_hostname }}.csv"
+          with_items: "{{ docker_images.stdout_lines }}"
+          delegate_to: 127.0.0.1
+          become: false
+    - block:
+        - command: "docker images -a  --format '{% raw %}{{ .ID }}{% endraw %}'"
+          register: docker_images_ids
+          changed_when: false
+          failed_when: false
+
+        - command: "docker inspect {{ docker_images_ids.stdout_lines | join('\n') }}"
+          register: docker_inspect
+          changed_when: false
+          failed_when: false
+
+        - copy:
+            dest: "{{ workdir }}/{{ inventory_hostname }}-{{ openshift_node_group_name }}.json"
+            content: "{{ docker_inspect.stdout }}"
+          delegate_to: 127.0.0.1

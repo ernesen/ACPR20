@@ -1,0 +1,38 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: avaloq-sealed-secrets
+    app.kubernetes.io/part-of: avaloq-sealed-secrets
+    name: sealed-secrets-key-admin
+  name: sealed-secrets-key-admin
+  namespace: acpr-sealed-secrets
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: avaloq-sealed-secrets
+    app.kubernetes.io/part-of: avaloq-sealed-secrets
+    name: sealed-secrets-service-proxier
+  name: sealed-secrets-service-proxier
+  namespace: acpr-sealed-secrets
+rules:
+  - apiGroups:
+      - ""
+    resourceNames:
+      - 'http:sealed-secrets-controller:'
+      - sealed-secrets-controller
+    resources:
+      - services/proxy
+    verbs:
+      - create
+      - get

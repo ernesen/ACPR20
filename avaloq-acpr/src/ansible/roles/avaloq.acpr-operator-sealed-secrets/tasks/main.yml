@@ -1,0 +1,62 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Prepare deployment
+  block:
+    - name: Configure 'acpr_sealed_secrets_operator' variable
+      set_fact:
+        acpr_sealed_secrets_operator: "{{ acpr_sealed_secrets_operator_defaults|combine(acpr_sealed_secrets_operator | default({})) }}"
+
+    - name: Create deployment directory
+      tempfile:
+        state: directory
+        suffix: _ss_deployment
+      register: deployment_folder
+
+    - name: Deploy Sealed Secrets Operator
+      block:
+        - name: Login to OpenShift
+          include_role:
+            name: avaloq.acpr-auth
+            tasks_from: login
+
+        - name: Copy yaml files
+          copy:
+            src: "{{ item }}"
+            dest: "{{ deployment_folder.path }}/{{ item | basename }}"
+          with_fileglob: "{{ role_path }}/files/*"
+
+        - name: Process templates
+          template:
+            src: '{{ item }}'
+            dest: "{{ deployment_folder.path }}/{{ item | basename }}"
+          with_fileglob: "{{ role_path }}/templates/*"
+
+        - name: Apply Sealed Secrets Operator
+          command: 'oc --match-server-version=true apply -n acpr-sealed-secrets -f {{ deployment_folder.path }}/'
+          environment:
+            KUBECONFIG: '{{ KUBECONFIG }}'
+          register: oc_apply_sealed_secrets
+          changed_when: '("created" or "configured") in oc_apply_sealed_secrets.stdout'
+
+  always:
+    - name: Remove deployment directory
+      file:
+        path: "{{ deployment_folder.path }}"
+        state: absent
+
+    - name: Logout from OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout

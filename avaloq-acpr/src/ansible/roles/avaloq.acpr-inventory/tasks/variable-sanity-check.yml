@@ -1,0 +1,48 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Fail if cust_os_version is not set
+  fail:
+    msg: "Please set `cust_os_version` to a valid value. See the 'Releases and roadmap' topic under https://docs.avaloq.com/acpr"
+  when: cust_os_version is not defined
+
+- name: Inform about cust_ansible_become
+  debug:
+    msg: "The ACPR code-base does not rely on the ansible_become variable anymore. If you do not have custom code using this variable, please consider removing the 'cust_ansible_become={{ cust_ansible_become }}' entry in the ACPR configuration file."
+  when: cust_ansible_become is defined
+
+- name: Fail if unsupported version is selected but not enforced
+  assert:
+    that: (cust_os_version in avq_os_supported_versions) or (allow_unsupported_os_version == cust_os_version)
+    msg: "Please be advised that you're trying to use an unsupported OpenShift version. If you really want to proceed set `allow_unsupported_os_version` to {{ cust_os_version }}"
+
+- name: Fail if unsupported channel is detected
+  fail:
+    msg: '{{ cust_os_channel }} is an unsupported OpenShift channel. Please switch to a supported channel.'
+  when:
+    - cust_os_version | regex_search('^v?4\\.[0-9]+\\.[0-9]+$')
+    - cust_os_channel not in ['stable', 'fast', 'eus']
+
+- name: Fail if `cust_registry_location` does not comply with Registry API specification
+  fail:
+    msg: "Variable `cust_registry_location` ({{ cust_registry_location  }}) has invalid format. See the 'OpenShift configuration' topic under https://docs.avaloq.com/acpr"
+  when:
+    - cust_os_version.split('.')[0] == 'v3'
+    - cust_registry_location is not match('^(?i)[A-Z0-9-.]{1,256}\.[A-Z0-9()]{1,6}(:\d{1,5})?\/[A-Z0-9-]*$')
+
+- name: Variable cust_cluster_credentials sanity checks
+  include_tasks: helpers/cust_cluster_credentials.yml
+  when:
+    - cust_cluster_credentials is defined
+    - acpr_os_version is defined

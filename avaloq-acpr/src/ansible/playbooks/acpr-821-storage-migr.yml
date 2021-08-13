@@ -1,0 +1,31 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: ACPR | Storage migrations
+  hosts: masters
+  gather_facts: no
+  become: yes
+
+  tasks:
+  - name: Execute storage migration
+    shell: 'oc adm migrate storage --include=* --config /etc/origin/master/admin.kubeconfig'
+    register: oc_cmd
+    changed_when: false
+    run_once: true
+    failed_when: "'errors=0' not in oc_cmd.stdout"

@@ -1,0 +1,30 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Get node "{{ inventory_hostname }}"
+  command: 'oc --match-server-version=true get node {{ inventory_hostname }} -o jsonpath="{.spec.unschedulable}"'
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  delegate_to: 127.0.0.1
+  register: unschedulable_output
+  changed_when: False
+  check_mode: no
+
+- name: Mark node "{{ inventory_hostname }}" as unschedulable
+  command: 'oc --match-server-version=true adm manage-node {{ inventory_hostname }} --schedulable=false'
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  delegate_to: 127.0.0.1
+  when: unschedulable_output.stdout != "true"
+  changed_when: unschedulable_output.stdout != "true"

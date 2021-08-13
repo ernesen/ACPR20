@@ -1,0 +1,21 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+ocp_release_checksum_sha:
+  4.6.8: 6ddbf56b7f9776c0498f23a54b65a06b3b846c1012200c5609c4bb716b6bdcdf
+  4.6.19: 47df4bfe1cfd6d63dd2e880f00075ed1d37f997fd54884ed823ded9f5d96abfc
+  4.6.26: e867135cd5a09192635b46ccab6ca7543e642378dc72fa22ea54961b05e322f2
+  4.6.29: b14262d736568113dc5aa9bc54a85a5e9ad6bdf4ae50ffa3de4994ddc472f1ef
+  4.6.38: 684c41dc3835a5fbeaa7fd411dde65169aafac290b4807196573f996d119adad
+  4.7.18: afcb309425d45a240de2df8e376f9632e6144052177fd62a0347934657b3573f

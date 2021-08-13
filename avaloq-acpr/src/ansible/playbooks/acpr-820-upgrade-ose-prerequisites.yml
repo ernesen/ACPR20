@@ -1,0 +1,60 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: ACPR | Upgrade prerequisites (localhost)
+  hosts: localhost
+  gather_facts: no
+  become: yes
+  tasks:
+  - name: "OpenShift installation packages are present ({{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] }})"
+    yum:
+      name: "{{ ose_install_packages }}"
+      allow_downgrade: true
+      update_cache: true
+      state: present
+
+  - name: Query openshift-ansible RPM package version
+    command: rpm -q --qf "%{VERSION}" openshift-ansible
+    args:
+      warn: false
+    changed_when: false
+    register: pck_ver
+
+  - set_fact:
+      exp_pkg_version: "{{ hostvars[groups['OSEv3'][0]]['openshift_pkg_version'] | regex_replace('^-','') }}"
+
+  - name: Compare openshift-ansible RPM package version
+    fail:
+      msg: "openshift-ansible RPM package ver. {{ pck_ver.stdout }} is lower than planned upgrade to ver. {{ exp_pkg_version }}"
+    when: pck_ver.stdout is version_compare(exp_pkg_version,'<')
+
+- name: ACPR | Upgrade prerequisites (nodes)
+  hosts: nodes
+  gather_facts: no
+  any_errors_fatal: true
+  become: yes
+  tasks: 
+  - name: "Pre-pull an image {{ acpr_docker_registry_location }}/openshift3/ose-pod:{{ openshift_image_tag }}"
+    docker_image:
+      name: "{{ acpr_docker_registry_location }}/openshift3/ose-pod"
+      tag: "{{ openshift_image_tag }}"
+      state: present
+
+- import_playbook: acpr-890-cluster-state.yml
+- import_playbook: acpr-821-storage-migr.yml

@@ -1,0 +1,32 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: ACPR | Generate inventory
+  hosts: localhost
+  become: false
+  gather_facts: true
+  vars:
+    cust_cluster_name: 'acpr'
+  vars_files:
+    - '../../acpr/{{ cust_cluster_name }}.yml'
+  roles:
+    - role: avaloq.acpr-inventory
+      ose_version: '{{ cust_os_version }}'
+  tasks:
+    - block:
+      - set_fact:
+          inventory_file: "{{ cust_invt_file }}"
+      - include_role:
+          name: avaloq.acpr-status
+          tasks_from: registry-check.yml

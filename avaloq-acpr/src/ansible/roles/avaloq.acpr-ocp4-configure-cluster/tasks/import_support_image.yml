@@ -1,0 +1,55 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Fetch must-gather image-stream
+  k8s_info:
+    api_key: '{{ api_key }}'
+    kubeconfig: '{{ authfile | default(omit) }}'
+    api_version: image.openshift.io/v1
+    kind: ImageStream
+    name: must-gather
+    namespace: openshift
+  register: is_mustgather
+
+- name: 'Import must-gather image'
+  diff: yes
+  k8s:
+    api_key: '{{ api_key }}'
+    kubeconfig: '{{ authfile | default(omit) }}'
+    state: present
+    api_version: image.openshift.io/v1
+    kind: ImageStream
+    name: must-gather
+    namespace: openshift
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      spec:
+        lookupPolicy:
+          local: false
+        tags:
+        - annotations: null
+          from:
+            kind: DockerImage
+            name: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:c418d5fd9036b79568eddfc426aa1007858def3c4973bc08b0e6476d33813429
+            # Note: the operator will always pull the correct image version for the active OCP release
+          generation: 16
+          importPolicy:
+            scheduled: true
+          name: latest
+          referencePolicy:
+            type: Source
+  when:
+    - is_mustgather.resources|length == 0

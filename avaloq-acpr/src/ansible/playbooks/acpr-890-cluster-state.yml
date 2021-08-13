@@ -1,0 +1,46 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: ACPR | Cluster health status
+  hosts: masters
+  gather_facts: no
+  any_errors_fatal: true
+  become: yes
+  tasks:
+    - name: Cluster API health
+      uri:
+        url: https://localhost:8443/healthz
+        return_content: yes
+        validate_certs: no
+      register: curl_cmd
+      changed_when: false
+      failed_when: "'ok' not in curl_cmd.content"
+      retries: 30
+      delay: 5
+      until: "'ok' in curl_cmd.content"
+
+    - name: All nodes are in Ready state
+      command: "oc --match-server-version=true get nodes --no-headers --config /etc/origin/master/admin.kubeconfig"
+      register: oc_cmd
+      changed_when: false
+      run_once: true
+      retries: 30
+      delay: 5
+      until: "'NotReady' not in oc_cmd.stdout"
+      failed_when: "'NotReady' in oc_cmd.stdout or oc_cmd.rc != 0"

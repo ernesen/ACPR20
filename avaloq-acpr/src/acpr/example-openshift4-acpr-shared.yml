@@ -1,0 +1,176 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+# Notes:
+#  * Sensitive or encoded values have been omitted (replaced with '<removed>' placeholder)
+#  * Following values install a minimal initial cluster
+#  * For additional configurable parameters refer to the ACPR documentation
+#  * Refer to the ACPR documentation (https://docs.avaloq.com/acpr) for more information
+#    and additional configurable parameters
+
+#########################################################################################
+############################# ACPR OpenShift 4.x cluster ################################
+#########################################################################################
+
+cust_os_cluster_name: oc.example.local
+cust_os_version: 4.6.38
+
+cust_cluster_credentials:
+  - url: https://api.acpr-cicd02.cp.avaloq.net:6443
+    insecureSkipTlsVerify: true
+
+########################
+#### Authentication ####
+########################
+
+# List of registries to be configured in the cluster with detailed technical settings:
+cust_container_images_registries:
+  AvaloqContainerImagesRepository:
+    host: registry.service.avaloq.com
+    username: <removed>
+    password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      <removed>
+    ca_certificate: |
+      -----BEGIN CERTIFICATE-----
+      MIIGwTCCBamgAwIBAgIIRhYjj1/sjEIwDQYJKoZIhvcNAQELBQAwgbQxCzAJBgNV
+      BAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQHEwpTY290dHNkYWxlMRow
+      GAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjEtMCsGA1UECxMkaHR0cDovL2NlcnRz
+      LmdvZGFkZHkuY29tL3JlcG9zaXRvcnkvMTMwMQYDVQQDEypHbyBEYWRkeSBTZWN1
+      cmUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwHhcNMTgxMDEwMTAxNjEwWhcN
+      MjAxMDEwMTAxNjEwWjBCMSEwHwYDVQQLExhEb21haW4gQ29udHJvbCBWYWxpZGF0
+      ZWQxHTAbBgNVBAMMFCouc2VydmljZS5hdmFsb3EuY29tMIIBIjANBgkqhkiG9w0B
+      AQEFAAOCAQ8AMIIBCgKCAQEAxDGRN05r0wHGxOiAPzjB/xiPuj2QfYKPYHOqX8z3
+      sPm7JUU9BI1QWTech8rI/xz4KM2j7XCN8w8o/I4A/YTY2LYsOdDfz4HLJZwM0mKw
+      eB/R5zc8MlJSv51odH9IrpR057AtxDfOOsvcm0V7rpqyqpwDaXcxa1G1SjCouvH0
+      4Hl3f96Nw96QVa1nwEzY1yWFPE7iBUaMX+FlwpXHypEkGzO+r/4QSSDrRMHJ4XIS
+      kBbFzIbISiAWPBn9bt9xum5Zvvoby3wDmdzxIzIFmI9ibFcREvxtjBgiTRGP8qkb
+      3bpnJG6K4GOvB8TxXbGJPdvWTn6bkffW09aYpPQ12e8VYwIDAQABo4IDRjCCA0Iw
+      DAYDVR0TAQH/BAIwADAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDgYD
+      VR0PAQH/BAQDAgWgMDcGA1UdHwQwMC4wLKAqoCiGJmh0dHA6Ly9jcmwuZ29kYWRk
+      eS5jb20vZ2RpZzJzMS04NzYuY3JsMF0GA1UdIARWMFQwSAYLYIZIAYb9bQEHFwEw
+      OTA3BggrBgEFBQcCARYraHR0cDovL2NlcnRpZmljYXRlcy5nb2RhZGR5LmNvbS9y
+      ZXBvc2l0b3J5LzAIBgZngQwBAgEwdgYIKwYBBQUHAQEEajBoMCQGCCsGAQUFBzAB
+      hhhodHRwOi8vb2NzcC5nb2RhZGR5LmNvbS8wQAYIKwYBBQUHMAKGNGh0dHA6Ly9j
+      ZXJ0aWZpY2F0ZXMuZ29kYWRkeS5jb20vcmVwb3NpdG9yeS9nZGlnMi5jcnQwHwYD
+      VR0jBBgwFoAUQMK9J47MNIMwojPX+2yz8LQsgM4wMwYDVR0RBCwwKoIUKi5zZXJ2
+      aWNlLmF2YWxvcS5jb22CEnNlcnZpY2UuYXZhbG9xLmNvbTAdBgNVHQ4EFgQUdIOT
+      9FRQ5F8jmoRpxH10y6uPtE0wggF8BgorBgEEAdZ5AgQCBIIBbASCAWgBZgB2AKS5
+      CZC0GFgUh7sTosxncAo8NZgE+RvfuON3zQ7IDdwQAAABZl16DqkAAAQDAEcwRQIh
+      ALPmGm16ljWRU21BssTruL530e/dyskZ9zj3VUUTI+uPAiBAd0wrbDS+u22b9zdA
+      HwCQg1jAo80COVCoVjUkNegDAAB1AO5Lvbd1zmC64UJpH6vhnmajD35fsHLYgwDE
+      e4l6qP3LAAABZl16EvUAAAQDAEYwRAIgU5n6FGlFWdw040Keu5I7Ng0htqFUQw2i
+      u7Gs6jpbpFgCICoTzPXqAioyNAvgDTGKMVkOVLht98q6BotBJYMQ8boAAHUAXqdz
+      +d9WwOe1Nkh90EngMnqRmgyEoRIShBh1loFxRVgAAAFmXXoT6AAABAMARjBEAiAL
+      FJqB1AkSN0pUzUMSmGAh0FYlCc7Ici02c8eQWT9egAIgclHxpGYx9LNoO+u1megx
+      DbXWSB/azqsYI3KqUGBR7PcwDQYJKoZIhvcNAQELBQADggEBAFHtO+Eu1l5xjJ/P
+      7iZ6d/Iethf0s/tMo/Ol4spiGMrNd78Ac6lFYg1ijGPyqfYqe1S55JuRslkyZvsh
+      S1HHAZnSI9b1LtXZZFSav0Nj9KsIIvwWOEDRTYCFqdeDJs9tSOy/s9pxYtJej2Ki
+      irpOgJGKM6cSd18w0xkBYpKWpuhxQ7WDyk/YL+gmEDLdj8woSlR03IBon4NP7vdL
+      8FBs9rppsFjnJZoMwiPBRssX01oTI+nDQ3cJEYymhDS4iThgUBYn85FsLYpuQ+fC
+      iVerbhtmWsyxL6vz7Dhimhe0f/mMlaxiGc+xermSaSpbYqcFsEQouXy6Tlp2s1EJ
+      Mij4rEA=
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIE0DCCA7igAwIBAgIBBzANBgkqhkiG9w0BAQsFADCBgzELMAkGA1UEBhMCVVMx
+      EDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoT
+      EUdvRGFkZHkuY29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRp
+      ZmljYXRlIEF1dGhvcml0eSAtIEcyMB4XDTExMDUwMzA3MDAwMFoXDTMxMDUwMzA3
+      MDAwMFowgbQxCzAJBgNVBAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQH
+      EwpTY290dHNkYWxlMRowGAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjEtMCsGA1UE
+      CxMkaHR0cDovL2NlcnRzLmdvZGFkZHkuY29tL3JlcG9zaXRvcnkvMTMwMQYDVQQD
+      EypHbyBEYWRkeSBTZWN1cmUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gRzIwggEi
+      MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC54MsQ1K92vdSTYuswZLiBCGzD
+      BNliF44v/z5lz4/OYuY8UhzaFkVLVat4a2ODYpDOD2lsmcgaFItMzEUz6ojcnqOv
+      K/6AYZ15V8TPLvQ/MDxdR/yaFrzDN5ZBUY4RS1T4KL7QjL7wMDge87Am+GZHY23e
+      cSZHjzhHU9FGHbTj3ADqRay9vHHZqm8A29vNMDp5T19MR/gd71vCxJ1gO7GyQ5HY
+      pDNO6rPWJ0+tJYqlxvTV0KaudAVkV4i1RFXULSo6Pvi4vekyCgKUZMQWOlDxSq7n
+      eTOvDCAHf+jfBDnCaQJsY1L6d8EbyHSHyLmTGFBUNUtpTrw700kuH9zB0lL7AgMB
+      AAGjggEaMIIBFjAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNV
+      HQ4EFgQUQMK9J47MNIMwojPX+2yz8LQsgM4wHwYDVR0jBBgwFoAUOpqFBxBnKLbv
+      9r0FQW4gwZTaD94wNAYIKwYBBQUHAQEEKDAmMCQGCCsGAQUFBzABhhhodHRwOi8v
+      b2NzcC5nb2RhZGR5LmNvbS8wNQYDVR0fBC4wLDAqoCigJoYkaHR0cDovL2NybC5n
+      b2RhZGR5LmNvbS9nZHJvb3QtZzIuY3JsMEYGA1UdIAQ/MD0wOwYEVR0gADAzMDEG
+      CCsGAQUFBwIBFiVodHRwczovL2NlcnRzLmdvZGFkZHkuY29tL3JlcG9zaXRvcnkv
+      MA0GCSqGSIb3DQEBCwUAA4IBAQAIfmyTEMg4uJapkEv/oV9PBO9sPpyIBslQj6Zz
+      91cxG7685C/b+LrTW+C05+Z5Yg4MotdqY3MxtfWoSKQ7CC2iXZDXtHwlTxFWMMS2
+      RJ17LJ3lXubvDGGqv+QqG+6EnriDfcFDzkSnE3ANkR/0yBOtg2DZ2HKocyQetawi
+      DsoXiWJYRBuriSUBAA/NxBti21G00w9RKpv0vHP8ds42pM3Z2Czqrpv1KrKQ0U11
+      GIo/ikGQI31bS/6kA1ibRrLDYGCD+H1QQc7CoZDDu+8CL9IVVO5EFdkKrqeKM+2x
+      LXY2JtwE65/3YR8V3Idv7kaWKK2hJn0KCacuBKONvPi8BDAB
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIEfTCCA2WgAwIBAgIDG+cVMA0GCSqGSIb3DQEBCwUAMGMxCzAJBgNVBAYTAlVT
+      MSEwHwYDVQQKExhUaGUgR28gRGFkZHkgR3JvdXAsIEluYy4xMTAvBgNVBAsTKEdv
+      IERhZGR5IENsYXNzIDIgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTQwMTAx
+      MDcwMDAwWhcNMzEwNTMwMDcwMDAwWjCBgzELMAkGA1UEBhMCVVMxEDAOBgNVBAgT
+      B0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoTEUdvRGFkZHku
+      Y29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRpZmljYXRlIEF1
+      dGhvcml0eSAtIEcyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv3Fi
+      CPH6WTT3G8kYo/eASVjpIoMTpsUgQwE7hPHmhUmfJ+r2hBtOoLTbcJjHMgGxBT4H
+      Tu70+k8vWTAi56sZVmvigAf88xZ1gDlRe+X5NbZ0TqmNghPktj+pA4P6or6KFWp/
+      3gvDthkUBcrqw6gElDtGfDIN8wBmIsiNaW02jBEYt9OyHGC0OPoCjM7T3UYH3go+
+      6118yHz7sCtTpJJiaVElBWEaRIGMLKlDliPfrDqBmg4pxRyp6V0etp6eMAo5zvGI
+      gPtLXcwy7IViQyU0AlYnAZG0O3AqP26x6JyIAX2f1PnbU21gnb8s51iruF9G/M7E
+      GwM8CetJMVxpRrPgRwIDAQABo4IBFzCCARMwDwYDVR0TAQH/BAUwAwEB/zAOBgNV
+      HQ8BAf8EBAMCAQYwHQYDVR0OBBYEFDqahQcQZyi27/a9BUFuIMGU2g/eMB8GA1Ud
+      IwQYMBaAFNLEsNKR1EwRcbNhyz2h/t2oatTjMDQGCCsGAQUFBwEBBCgwJjAkBggr
+      BgEFBQcwAYYYaHR0cDovL29jc3AuZ29kYWRkeS5jb20vMDIGA1UdHwQrMCkwJ6Al
+      oCOGIWh0dHA6Ly9jcmwuZ29kYWRkeS5jb20vZ2Ryb290LmNybDBGBgNVHSAEPzA9
+      MDsGBFUdIAAwMzAxBggrBgEFBQcCARYlaHR0cHM6Ly9jZXJ0cy5nb2RhZGR5LmNv
+      bS9yZXBvc2l0b3J5LzANBgkqhkiG9w0BAQsFAAOCAQEAWQtTvZKGEacke+1bMc8d
+      H2xwxbhuvk679r6XUOEwf7ooXGKUwuN+M/f7QnaF25UcjCJYdQkMiGVnOQoWCcWg
+      OJekxSOTP7QYpgEGRJHjp2kntFolfzq3Ms3dhP8qOCkzpN1nsoX+oYggHFCJyNwq
+      9kIDN0zmiN/VryTyscPfzLXs4Jlet0lUIDyUGAzHHFIYSaRt4bNYC8nY7NmuHDKO
+      KHAN4v6mF56ED71XcLNa6R+ghlO773z/aQvgSMO3kwvIClTErF0UZzdsyqUvMQg3
+      qm5vjLyb4lddJIGvl5echK1srDdMZvNhkREg5L4wn3qkKQmw4TRfZHcYQFHfjDCm
+      rw==
+      -----END CERTIFICATE-----
+    trust_type: signedBy
+    sigstore_type: web
+    sigstore: https://registry.service.avaloq.com/signatures
+    pubkeys:
+      - |
+        -----BEGIN PGP PUBLIC KEY BLOCK-----
+        Version: GnuPG v2.0.22 (GNU/Linux)
+
+        mQENBF1bpO0BCACowmv+pUdNY+4fctf9YqS1zCVvUu7cWbar5HbURDhS6N1guQ5v
+        Ed1720o1nn/ZDg+xgnBd5Z+RqfOaFjr4BOJLZ0yUn+a82zQL3wA3RLUswcsxTMWQ
+        QBwlVqrCZwWjLmmH1DrvdGYT75VqTN5MkEJ5JMbgq6u9UsmueF5stkUfIYfLWQbv
+        kEJzSmBtN/KUciVWCTgXnLhM6eHitdyr2PHKjSLod2pAy3AA28GHAwiQTNx2NfUi
+        8JkaAqn9mOS7P76mtDcvXkZ16VWwzt+6gB3cz4+/LSXC1GHLTo78Cv3phGPFld1o
+        Mg81hHV7TkGFcivvf8j67ref/JFddrIo0tvTABEBAAG0YyJBdmFsb3EgRXZvbHV0
+        aW9uIEFHIC0gU2lnbmluZyAtIDAwMSIgKCJBdmFsb3EgaW1hZ2Ugc2lnbmluZyBr
+        ZXkiKSA8Iml0LWluZnJhc3RydWN0dXJlQGF2YWxvcS5jb20iPokBPQQTAQgAJwUC
+        XVuk7QIbAwUJBaOagAULCQgHAwUVCgkICwUWAgMBAAIeAQIXgAAKCRDZKO/0lnpG
+        tqVhB/91LapK5bAXj+paW35/plMCwMdueJx+5iJnxE5VuZjmLDIN1ki3meHtAq2f
+        ySB5450zTly0cYYZ3wVWeRkZn6n+cPMCDwOHqvCEjdxe0yZIPB2lcoDBMiajTz98
+        YyMrRzFetBIaO+/K++vI9U9AuaIEhog9EmQ6gq5xgVid5y7OP83/CqDTJFgLxRTD
+        33er2zlFaLkf5NIzkzR7uHl+msglQCxThQWOl4Y4XZWo03ZTAKfhDb1cTahODAM6
+        Gks5lg1fOxUNytiIo4jyZTw0K+U9/DLhx6bjSgEZxK4nofIg2PueNdOvpsoEUy5s
+        XfedXQBykfYlbOtN+LhhBzfwjHwXuQENBF1bpO0BCACX5g8lOK0zCE0eZlQnyrKP
+        Sz60MKuc8wgBRLX8v/QhEwz1IpLN5+Cofa53nNQ59yODxna6ai8YTam/jGde/dSz
+        Q/V8e0YH5Hw3w1qtNRUTTl6ULfJjJYYiCJoS+lYDa35vSofK4v0LwnY+npwo8bSR
+        w9wmxjjRu9UgsjWivd8ZgFTwVz5ruNUg8atrNrKiXZlWu+YRU2uvI6oHpN5TZ8z4
+        KOQSnOdzfL64xb9pJlNPEFPleceolh4V89UYibRntnbqSp1VEqf/r5wQnDQR1ROf
+        tHtfYs4rMar9vJx7t9b6NAUtSa+RMJrZQq9ad+NuRDogLYANelLM3NKEc3hlMkc9
+        ABEBAAGJASUEGAEIAA8FAl1bpO0CGwwFCQWjmoAACgkQ2Sjv9JZ6Rray/wf9Gg7o
+        HlefiBlHgDtyQ6aauilTaYUE5F77QV9YyNoszMd14GjJtAiJyayv7jNYiRjqE/jm
+        WLunRF6XURgR4wv2ADfstl3dL23VTMzdbQ2bRvp20IzcY1Lp0GzhC4SU/Vj6IqAD
+        2Gob7OIH3K1BqhnEaIwrZ2FbKXTs0oxtSpmh5OMc5J3SUAA98kPNmIpYXmZCk/JW
+        To3i9a158LLy1EjD6btKyoNLGLLfyCUNqptW+J5VtcGLIZypuiL2fPCw09c8oBTv
+        FXrxUWvzTWaJuH6fRtZHuAuzF1FkYSdtA+0r5omoBqAntGvq/fP4PYWLWwZxs3MP
+        f8x87l6/syNp9wgAsA==
+        =dzhG
+        -----END PGP PUBLIC KEY BLOCK-----

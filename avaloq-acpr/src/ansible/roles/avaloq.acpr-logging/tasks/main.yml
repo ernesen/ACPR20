@@ -1,0 +1,52 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- block:
+    - name: Login to OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: login
+
+    - name: label openshift-logging namespace
+      command: 'oc --match-server-version=true label namespace openshift-logging name=openshift-logging --overwrite'
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+
+    - name: annotate elasticsearch for prometheus monitoring
+      include_tasks: label_es_deployments.yml
+
+    - name: Process templates
+      template:
+        src: '{{ item }}'
+        dest: '{{ role_path }}/files/{{ (item|basename|splitext)[0] }}'
+      with_fileglob:
+        - "{{ role_path }}/templates/*.j2"
+
+    - name: Switch to local hostpath PV
+      include: pv-hostpath.yml
+      when:
+        - acpr_logging_pv_use_hostpath|bool
+
+    - name: Apply openshift artifacts
+      command: 'oc --match-server-version=true apply -f {{ role_path }}/files/ -n openshift-logging'
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: oc_apply_artifact
+      changed_when: '("created" or "configured") in oc_apply_artifact.stdout'
+
+  always:
+    - name: Logout from OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout

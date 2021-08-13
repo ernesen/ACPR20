@@ -1,0 +1,151 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: "Create and use namespace"
+  block:
+    - name: "Create {{ acd_namespace }} namespace"
+      command: 'oc new-project {{ acd_namespace }}'
+      failed_when: False
+
+    - name: "Switch namespace to {{ acd_namespace }}"
+      command: 'oc project {{ acd_namespace }}'
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  when:
+    - acd_namespace is defined
+    - acd_namespace is not none
+    - acd_namespace | length > 0
+
+- name: Check if extensions folder exists (fetch not needed)
+  stat:
+    path: "{{ wdir }}/extensions"
+  register: extensionsfolder
+
+- name: Avaloq Installator | Fetch
+  command: "{{ INST }} fetch"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+    AVALOQ_INSTALLATOR_OPTS: '{{ acd_inst_opts }}'
+  args:
+    chdir: "{{ wdir }}"
+  register: output
+
+- block:
+    - name: Avaloq Installator | Collect secrects
+      command: "{{ INST }} secrets collect"
+      args:
+        chdir: "{{ wdir }}"
+    - name: Avaloq Installator | Decrypt secrects
+      command: "{{ INST }} secrets --action decrypt --key-file {{ acd_secrets_key_file_path }}"
+      args:
+        chdir: "{{ wdir }}"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+    AVALOQ_INSTALLATOR_OPTS: '{{ acd_inst_opts }}'
+  when:
+    - acd_secrets_key_file_path is not none
+    - acd_secrets_key_file_path | length > 0
+
+- name: Avaloq Installator | Configure
+  command: "{{ INST }} configure"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+    AVALOQ_INSTALLATOR_OPTS: '{{ acd_inst_opts }}'
+  args:
+    chdir: "{{ wdir }}"
+  register: output
+
+- name: Avaloq Installator | Lint
+  command: "{{ INST }} lint"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+    AVALOQ_INSTALLATOR_OPTS: '{{ acd_inst_opts }}'
+  args:
+    chdir: "{{ wdir }}"
+  when: acd_inst_lint | bool
+
+- block:
+    - name: Avaloq Installator | Export images
+      command: "{{ INST }} images --export"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+        AVALOQ_INSTALLATOR_OPTS: '{{ acd_inst_opts }}'
+      args:
+        chdir: "{{ wdir }}"
+
+    - name: Set `acd_image_file` variable
+      set_fact:
+        acd_image_file: "{{ wdir }}/images.txt"
+
+    - include_tasks: images_exist.yml
+  when:
+  - acd_image_existence | bool
+
+- name: Avaloq Installator | Deploy
+  command: "{{ INST }} deploy {% if acd_cfset is defined %}--config-set {{ acd_cfset }}{% endif %} {% if acd_namespace is defined %}--namespace {{ acd_namespace }}{% endif %} {% if acd_inst_kind_exclude is defined %}--kind-exclude {{ acd_inst_kind_exclude }}{% endif %} {{ acd_inst_params }}"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+    AVALOQ_INSTALLATOR_OPTS: '{{ acd_inst_opts }}'
+  args:
+    chdir: "{{ wdir }}"
+  register: output
+
+- name: Check commands.txt
+  stat:
+    path: "{{ wdir }}/output/deploy/commands.txt"
+  register: output
+
+- name: Get all OpenShift commands
+  command: "cat {{ wdir }}/output/deploy/commands.txt"
+  register: commands
+  when: output.stat.exists | bool
+
+- name: Execute OpenShift commands (cluster-admin available)
+  shell: "{{ item }}"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  loop: "{{ commands.stdout_lines }}"
+  when:
+    - output.stat.exists | bool
+    - commands.stdout_lines | length > 0
+    - avq_clusteradmin_available
+  register: constellation_commands_cluster_admin
+  retries: 3
+  delay: 10
+  until: constellation_commands_cluster_admin.rc == 0
+
+- name: Execute OpenShift commands (cluster-admin not available)
+  shell: "{{ item }}"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  loop: "{{ commands.stdout_lines }}"
+  when:
+    - output.stat.exists | bool
+    - commands.stdout_lines | length > 0
+    - not avq_clusteradmin_available
+    - not item|regex_search('(ClusterRole|ClusterRoleBinding|CustomResourceDefinition|DaemonSet|Namespace)', ignorecase=True)
+  register: constellation_commands_non_cluster_admin
+  retries: 5
+  delay: 40
+  until: constellation_commands_non_cluster_admin.rc == 0
+
+- name: Show what needs to be run with cluster-admin privileges
+  debug:
+    msg: '{{ item }} needs to be applied with cluster-admin privileges'
+  loop: "{{ commands.stdout_lines }}"
+  when:
+    - output.stat.exists | bool
+    - commands.stdout_lines | length > 0
+    - not avq_clusteradmin_available
+    - item|regex_search('(ClusterRole|ClusterRoleBinding|CustomResourceDefinition|DaemonSet|Namespace)', ignorecase=True)

@@ -1,0 +1,88 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: ACPR | Copy & sign container images
+  hosts: localhost
+  become: true
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+  tasks:
+    - name: Install all required packages
+      yum:
+        name: ['atomic', 'curl', 'docker']
+        state: present
+
+    - name: Configure proxy in docker daemon
+      block:
+        - lineinfile:
+            dest: /etc/sysconfig/docker
+            regexp: '^HTTP_PROXY=.*$'
+            line: "HTTP_PROXY='{{ acpr_docker_http_proxy | default('') }}'"
+          notify: restart docker
+        - lineinfile:
+            dest: /etc/sysconfig/docker
+            regexp: '^HTTPS_PROXY=.*$'
+            line: "HTTPS_PROXY='{{ acpr_docker_https_proxy | default('') }}'"
+          notify: restart docker
+        - lineinfile:
+            dest: /etc/sysconfig/docker
+            regexp: '^NO_PROXY=.*$'
+            line: "NO_PROXY='{{ acpr_docker_no_proxy | default('') }}'"
+          notify: restart docker
+
+    - name: Configure containers signatures
+      include_role:
+        name: avaloq.acpr-docker
+        tasks_from: container-signature.yml
+      vars:
+        acpr_container_images_registries: "{{ acpr_administration_container_images_registries }}"
+        acpr_atomic_default_trust_policy: "accept"
+      when: acpr_administration_container_images_registries is defined
+
+    - meta: flush_handlers
+
+    - name: Login to all container registries
+      block:
+        - file:
+            path: "{{ lookup('env','HOME') }}/.docker/config.json"
+            state: absent
+        - docker_login:
+            username: '{{ item.value.username }}'
+            password: '{{ item.value.password }}'
+            state: present
+            registry_url: '{{ item.value.host }}'
+          loop: '{{ acpr_administration_container_images_registries | default({}) | dict2items }}'
+          when:
+            - item.value.username is defined
+            - item.value.password is defined
+
+    - name: Prepull and sign all container images
+      include_role:
+        name: avaloq.acpr-docker
+        tasks_from: copy-and-sign.yml
+      vars:
+        registry_configuration: "{{ element.value }}"
+      when:
+        - acpr_prepull_container_registry is defined
+      loop: "{{ lookup('dict', acpr_prepull_container_registry, wantlist=True) }}"
+      loop_control:
+        loop_var: element

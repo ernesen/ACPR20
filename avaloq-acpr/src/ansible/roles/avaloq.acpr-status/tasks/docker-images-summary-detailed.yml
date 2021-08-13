@@ -1,0 +1,21 @@
+---
+- name: Get docker images for each node
+  block:
+    - shell: "docker images -a --format '{% raw %}{{ .ID }}{% endraw %}' | tr '\n' ' '"
+      register: docker_images
+      changed_when: false
+      failed_when: false
+
+    - command: "docker inspect {{ docker_images.stdout }}"
+      register: docker_inspect
+      changed_when: false
+
+    - set_fact:
+        docker_info: "{{ docker_inspect.stdout | from_json }}"
+
+    - lineinfile:
+        path: "{{ workdir }}/docker-images-summary.csv"
+        line: "{{ inventory_hostname }},{{ openshift_node_group_name.split('-')[2] }},{{ item.1 | regex_replace(item.1.split('/')[-2] + '/' + item.1.split('/')[-1], '') | regex_replace('/$', '')  }},{{ item.1.split('/')[-2] }}/{{ item.1.split('/')[-1].split(':')[0] }},{{ item.1.split(':')[1] }},{{ item.0.Size }}"
+        create: yes
+      loop: "{{ lookup('subelements', docker_info, 'RepoTags', {'skip_missing': True}) }}"
+      delegate_to: 127.0.0.1

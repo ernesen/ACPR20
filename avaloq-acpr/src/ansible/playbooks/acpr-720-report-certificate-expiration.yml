@@ -1,0 +1,32 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: ACPR | Check certification expiration dates
+  hosts: nodes
+  any_errors_fatal: true
+  vars:
+    ansible_become: true
+    openshift_is_atomic: false
+    openshift_certificate_expiry_save_json_results: yes
+    openshift_certificate_expiry_generate_html_report: yes
+    openshift_certificate_expiry_show_all: yes
+    openshift_certificate_expiry_warning_days: "{{ cust_expiry_warning_days|default(730) }}"
+    openshift_certificate_expiry_fail_on_warn: no
+  roles:
+    - role: /usr/share/ansible/openshift-ansible/roles/openshift_certificate_expiry

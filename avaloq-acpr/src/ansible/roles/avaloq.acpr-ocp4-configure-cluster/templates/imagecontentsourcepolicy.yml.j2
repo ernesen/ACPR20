@@ -1,0 +1,14 @@
+---
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: {{ item.key }}
+  labels:
+    app.kubernetes.io/managed-by: acpr
+spec:
+  repositoryDigestMirrors:
+  - source: {{ item.value.source }}
+    mirrors:
+    {% for mirror in item.value.mirrors %}
+    - {{ mirror }}
+    {% endfor %}

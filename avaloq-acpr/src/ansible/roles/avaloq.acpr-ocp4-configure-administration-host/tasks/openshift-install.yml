@@ -1,0 +1,47 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check if openshift-install is installed
+  stat:
+    path: /usr/local/bin/openshift-install
+  register: oinstall_binary
+  failed_when: false
+
+- name: Get openshift-install version
+  command: /usr/local/bin/openshift-install version
+  register: oinstall_version
+  changed_when: False
+  when: oinstall_binary.stat.exists
+
+- name: Show openshift-install installation hint
+  debug:
+    msg: |
+      Need to install or update openshift-install.
+      Please make sure you can reach the archive at {{ acpr_openshift_installer_url }} or download it manually and set *cust_openshift_installer_url* accordingly.
+      Alternatively install the openshift-install in version {{ acpr_os_version }} manually and set *cust_openshift_installer_manage* to _false_.
+  when: (not oinstall_binary.stat.exists) or (oinstall_binary.stat.exists and acpr_os_version not in oinstall_version.stdout_lines[0])
+
+- name: Get 'openshift-install'
+  unarchive:
+    src: '{{ acpr_openshift_installer_url }}'
+    remote_src: true
+    dest: /usr/local/bin
+    mode: 0755
+    exclude:
+      - README.md
+  environment:
+    http_proxy: "{{ acpr_docker_http_proxy | default(lookup('env', 'http_proxy')) | default('') }}"
+    https_proxy: "{{ acpr_docker_https_proxy | default(lookup('env', 'https_proxy')) | default('') }}"
+    no_proxy: "{{ acpr_docker_no_proxy | default(lookup('env', 'no_proxy')) | default('') }}"
+  when: (not oinstall_binary.stat.exists) or (oinstall_binary.stat.exists and acpr_os_version not in oinstall_version.stdout_lines[0])

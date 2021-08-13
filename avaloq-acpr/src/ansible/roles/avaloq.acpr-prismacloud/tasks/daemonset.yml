@@ -1,0 +1,57 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Get Prisma Cloud console service IP
+  command: "oc get service -n {{ idx.value.namespace }} -o jsonpath={.spec.clusterIP} twistlock-console"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  changed_when: False
+  register: tw_service_ip
+
+- name: Store service in fact
+  set_fact:
+    tw_service_ip: "{{ tw_service_ip.stdout }}"
+
+- name: Download Prisma Cloud Defender DaemonSet
+  command: >
+    curl -o {{ deployment_folder.path }}/defender_daemonset.yml -s -w '%{http_code}\n' -k -XPOST --header "Content-Type: application/json" -u {{ idx.value.console.username }}:{{ idx.value.console.password }} --data
+    '{
+      "orchestration": "openshift",
+      "namespace": "{{ idx.value.namespace }}",
+      "consoleaddr": "{{ tw_service_ip }}",
+      "image": "{{ idx.value.defender.image | default(defender_image) }}",
+      "selinux": true,
+      "serviceAccounts": true,
+      "nodeSelector": "{{ idx.value.defender.nodeSelector | default() }}",
+      "cri": {{ 'true' if acpr_os_maj_version == 4 else 'false' }}
+    }' "https://{{ twistlock_address }}/api/v1/defenders/daemonset.yaml"
+  changed_when: False
+
+- name: Register Prisma Cloud Defender into the console
+  uri:
+    url: "https://{{ twistlock_address }}/api/v1/settings/certs"
+    method: POST
+    body_format: json
+    password: "{{ idx.value.console.password }}"
+    user: "{{ idx.value.console.username }}"
+    force_basic_auth: yes
+    body:
+      consoleSAN: "[\"127.0.0.1\", \"{{ tw_service_ip }}\", \"{{ twistlock_address }}\"]"
+    validate_certs: no
+
+- name: Deploy Prisma Cloud Defender
+  command: "oc  apply -f {{ deployment_folder.path }}/defender_daemonset.yml -n {{ idx.value.namespace }}"
+  environment:
+    KUBECONFIG: '{{ KUBECONFIG }}'
+  changed_when: false

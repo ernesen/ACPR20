@@ -1,0 +1,45 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Clean up remote backup directories
+  file:
+    name: '{{ item }}'
+    state: absent
+  loop:
+    - '{{ _temp_backup_dir }}'
+    - '{{ _temp_backup_dir }}.tgz'
+
+- name: Clean up old backups
+  block:
+    - name: Get list of directories to clean up
+      find:
+        paths: '{{ backup_root }}'
+        file_type: directory
+        patterns:
+          - 'acpr-backup-*'
+        recurse: no
+        age: '{{ retention_days }}d'
+      register: acpr_backup_dirs
+
+    - name: Remove status directories
+      file:
+        path: '{{ item }}'
+        state: absent
+      loop: "{{ acpr_backup_dirs.files| map(attribute='path')| list }}"
+  when:
+    - retention_days is defined
+    - retention_days > -1
+  delegate_to: localhost
+  become: false
+  run_once: true

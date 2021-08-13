@@ -1,0 +1,53 @@
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: OPENSHIFT_LOGGING_UPDATE_CHANNEL
+    validation:
+      type: text
+      required: false
+    value: 4.6
+    description: |
+      Cluster and Logging are using a different update channel. Use this variable to control the version of the es-operator.
+  - name: OPENSHIFT_LOGGING_SUBSCRIPTION_SOURCE
+    validation:
+      type: text
+      required: false
+    value: redhat-operators
+    description: ''
+  - name: OPENSHIFT_LOGGING_STARTING_CSV
+    validation:
+      type: text
+      required: false
+    value: elasticsearch-operator.4.6.0-202102200141.p0
+    description: |
+      Set a specific version of the operator
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-operators-redhat
+  annotations:
+    openshift.io/node-selector: ''
+  labels:
+    openshift.io/cluster-monitoring: 'true'
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-operators-redhat
+  namespace: openshift-operators-redhat
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: elasticsearch-operator
+  namespace: openshift-operators-redhat
+spec:
+  channel: '${OPENSHIFT_LOGGING_UPDATE_CHANNEL}'
+  installPlanApproval: Automatic
+  source: '${OPENSHIFT_LOGGING_SUBSCRIPTION_SOURCE}'
+  sourceNamespace: openshift-marketplace
+  name: elasticsearch-operator
+  startingCSV: '${OPENSHIFT_LOGGING_STARTING_CSV}'

@@ -1,0 +1,293 @@
+apiVersion: avaloq/v1
+kind: AvaloqFolder
+spec:
+- kind: ConfigMap
+  name: oracle-templates
+  folder: oracle-templates
+  includes: '*.template'
+  description: oracle templates configmap
+  labels:
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator
+---
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: OPENSHIFT_NAMESPACE
+    validation:
+      type: text
+      required: true
+    description: The namespace used on Openshift where this constellation is deployed
+      to.
+    value: acpr-database-operator
+  - name: AVALOQ_CONTAINER_IMAGE_REGISTRY
+    validation:
+      required: true
+      type: text
+    value: registry.service.avaloq.com/
+    description: URL of the container image registry. Must end with "/", unless you
+      set it to null
+  - name: AVALOQ_DATABASE_OPERATOR_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: avaloq/avaloq-database-operator:0.7.1
+    description: |
+      Container image name and version. Example: `avaloq/avaloq-database-operator:0.7.1`
+  - name: AVALOQ_DATABASE_OPERATOR_LOGACCESS_GROUPNAME
+    validation:
+      type: text
+      required: false
+    value: system:authenticated
+    description: |
+      User group which will get access to database operator logs Example: `database-operators`
+  - name: AVALOQ_DATABASE_OPERATOR_ENV
+    validation:
+      type: text
+    description: |
+      Comma separated list of container environment variables to inject Example: `DB_OPERATOR_DROP_SCHEMA_ON_DELETE:false,SPRING_PROFILES_ACTIVE:readonly`
+  - name: AVALOQ_DATABASE_OPERATOR_RESOURCES_REQUEST_CPU
+    value: 5m
+    validation:
+      required: false
+      type: text
+    description: |
+      The cpu requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  - name: AVALOQ_DATABASE_OPERATOR_RESOURCES_REQUEST_MEMORY
+    value: 512Mi
+    validation:
+      required: false
+      type: text
+    description: |
+      The memory requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  - name: AVALOQ_DATABASE_OPERATOR_RESOURCES_LIMIT_CPU
+    value: 2
+    validation:
+      required: false
+      type: text
+    description: |
+      The cpu limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  - name: AVALOQ_DATABASE_OPERATOR_RESOURCES_LIMIT_MEMORY
+    value: 512Mi
+    validation:
+      required: false
+      type: text
+    description: |
+      The memory limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: avaloq-database-operator-patch-env
+    when:
+      matching:
+        kind: Deployment
+        metadata.name: avaloq-database-operator
+    then:
+    - action: apply
+      script: |
+        if ('${AVALOQ_DATABASE_OPERATOR_ENV}' != null && !('${AVALOQ_DATABASE_OPERATOR_ENV}'.isEmpty())) {
+          env = new java.util.ArrayList();
+          envList = '${AVALOQ_DATABASE_OPERATOR_ENV}'.split(',');
+
+          for (int i = 0; i < envList.size(); i++) {
+            envEntry = envList[i].split(':');
+            entrySet = new java.util.HashMap();
+            entrySet.put('name',envEntry[0]);
+            entrySet.put('value' , envEntry[1]);
+            env.add(entrySet);
+          }
+          $.spec.template.spec.containers[0].env = env;
+        }
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: databaseschema-editor
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: 'true'
+    rbac.authorization.k8s.io/aggregate-to-edit: 'true'
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator
+rules:
+- apiGroups:
+  - avaloq.com
+  resources:
+  - databaseschemas
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: databaseschema-operator
+  labels:
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - avaloq.com
+  resources:
+  - databaseschemas
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - avaloq.com
+  resources:
+  - databaseschemas/status
+  verbs:
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: acpr-database-operator
+  labels:
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: databaseschema-operator
+subjects:
+- kind: ServiceAccount
+  name: avaloq-database-operator
+  namespace: ${OPENSHIFT_NAMESPACE}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avaloq-database-operator
+  labels:
+    app: avaloq-database-operator
+    app.kubernetes.io/name: avaloq-database-operator
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator
+    avaloq.com/zone: core-internal
+  namespace: ${OPENSHIFT_NAMESPACE}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: avaloq-database-operator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: '9090'
+        prometheus.io/scheme: http
+        prometheus.io/scrape: 'true'
+      labels:
+        app: avaloq-database-operator
+        app.kubernetes.io/component: database
+        avaloq.com/app: avaloq-database-operator
+        avaloq.com/zone: core-internal
+    spec:
+      serviceAccountName: avaloq-database-operator
+      containers:
+      - name: avaloq-database-operator
+        image: ${AVALOQ_CONTAINER_IMAGE_REGISTRY}${AVALOQ_DATABASE_OPERATOR_CONTAINER_IMAGE}
+        ports:
+        - containerPort: 9090
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${AVALOQ_DATABASE_OPERATOR_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_DATABASE_OPERATOR_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_DATABASE_OPERATOR_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_DATABASE_OPERATOR_RESOURCES_REQUEST_MEMORY}
+        volumeMounts:
+        - mountPath: /opt/avaloq/templates/oracle
+          name: oracle-templates-volume
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: oracle-templates
+        name: oracle-templates-volume
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/description: Avaloq Database Operator
+    openshift.io/display-name: ACPR DB Operator
+  name: ${OPENSHIFT_NAMESPACE}
+  labels:
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator
+spec:
+  finalizers:
+  - kubernetes
+---
+apiVersion: authorization.openshift.io/v1
+kind: Role
+metadata:
+  name: log-viewer
+  namespace: ${OPENSHIFT_NAMESPACE}
+rules:
+- apiGroups:
+  - ''
+  attributeRestrictions: null
+  resources:
+  - namespaces
+  - pods
+  - pods/log
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: log-viewer
+  namespace: ${OPENSHIFT_NAMESPACE}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: log-viewer
+subjects:
+- kind: Group
+  name: ${AVALOQ_DATABASE_OPERATOR_LOGACCESS_GROUPNAME}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: avaloq-database-operator
+  namespace: ${OPENSHIFT_NAMESPACE}
+  labels:
+    app.kubernetes.io/component: database
+    avaloq.com/app: avaloq-database-operator

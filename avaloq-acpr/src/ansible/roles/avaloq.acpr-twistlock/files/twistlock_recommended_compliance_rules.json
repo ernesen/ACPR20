@@ -1,0 +1,258 @@
+{
+  "rules": [
+    {
+      "modified": "2019-09-11T05:45:43.872Z",
+      "owner": "admin",
+      "name": "Recommended Compliance Rules (in Alert mode)",
+      "previousName": "",
+      "effect": "alert",
+      "resources": {
+        "hosts": [
+          "*"
+        ],
+        "images": [
+          "*"
+        ],
+        "labels": [
+          "*"
+        ],
+        "containers": [
+          "*"
+        ]
+      },
+      "action": [
+        "*"
+      ],
+      "condition": {
+        "readonly": false,
+        "device": "",
+        "vulnerabilities": [
+          {
+            "id": 406,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 41,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 420,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 422,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 424,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 425,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 426,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 427,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 429,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 430,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 431,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 432,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 433,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 510,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 51,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 511,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 512,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 514,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 515,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 516,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 517,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 518,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 519,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 52,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 520,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 521,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 524,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 525,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 526,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 528,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 53,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 530,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 531,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 54,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 55,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 56,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 57,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 58,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 59,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 597,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 598,
+            "block": false,
+            "minSeverity": 1
+          },
+          {
+            "id": 599,
+            "block": false,
+            "minSeverity": 1
+          }
+        ]
+      },
+      "group": [
+        "*"
+      ],
+      "alertThreshold": {
+        "disabled": false,
+        "value": 0
+      },
+      "blockThreshold": {
+        "enabled": false,
+        "value": 0
+      },
+      "graceDays": 0
+    }
+  ],
+  "policyType": "containerCompliance",
+  "_id": "containerCompliance"
+}

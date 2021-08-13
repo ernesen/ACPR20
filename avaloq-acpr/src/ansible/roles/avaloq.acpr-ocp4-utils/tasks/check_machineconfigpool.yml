@@ -1,0 +1,47 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to  in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check Master machineconfiguration
+  check_mode: no
+  k8s_info:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfigPool
+    name: master
+  register: machineconfigpool
+  retries: 60
+  delay: 60
+  until:
+    - machineconfigpool.resources | default([]) | length > 0
+    - machineconfigpool.resources[0].status.degradedMachineCount == 0
+    - machineconfigpool.resources[0].status.machineCount  == machineconfigpool.resources[0].status.updatedMachineCount
+  when: not acpr_machineconfig.master.skip_verify | bool
+
+- name: Check Worker machineconfiguration
+  check_mode: no
+  k8s_info:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfigPool
+    name: worker
+  register: machineconfigpool
+  retries: 60
+  delay: 60
+  until:
+    - machineconfigpool.resources | default([]) | length > 0
+    - machineconfigpool.resources[0].status.degradedMachineCount == 0
+    - machineconfigpool.resources[0].status.machineCount  == machineconfigpool.resources[0].status.updatedMachineCount
+  when: not acpr_machineconfig.worker.skip_verify | bool

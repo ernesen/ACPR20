@@ -1,0 +1,52 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- include_role:
+    name: avaloq.acpr-repository
+
+- name: Install required packages
+  yum:
+    name: python2-openshift
+    state: present
+
+- name: "Install Avaloq Installator version {{ avaloq_installator_version }}"
+  yum:
+    name: 'avaloq-installator-{{ avaloq_installator_version }}'
+    state: present
+    update_cache: true
+    allow_downgrade: true
+
+- name: Create cluster directory
+  become: false
+  file:
+    path: "{{ avq_acpr_home }}/{{ os_cluster_name }}"
+    state: directory
+    mode: 0700
+    recurse: yes
+
+- include_role:
+    name: avaloq.acpr-ocp4-webserver
+
+- name: Manage openshift-install
+  include_tasks: openshift-install.yml
+  when: acpr_openshift_installer_manage | bool
+
+- name: Manage openshift-client (oc)
+  include_tasks: oc-client.yml
+  when: acpr_openshift_client_manage | bool
+
+- name: Assure rsync installed in the system
+  yum:
+    name: rsync
+    state: present

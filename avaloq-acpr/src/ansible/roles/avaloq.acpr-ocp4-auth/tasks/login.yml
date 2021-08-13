@@ -1,0 +1,59 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check if KUBECONFIG file exists
+  stat:
+    path: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+  register: authkubeconfig
+
+- name: Set 'authfile' variable
+  set_fact:
+    authfile: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+  when: authkubeconfig.stat.exists
+
+- name: Create a temporary file for the CA certificate
+  tempfile:
+    state: file
+  register: ca_certificate
+  check_mode: no
+  when: >
+    (acpr_cluster_credentials[0]['certificateAuthority'] | default('') | length > 0)
+
+- name: Save CA certificate to the temporary file
+  copy:
+    content: "{{ acpr_cluster_credentials[0]['certificateAuthority'] }}"
+    dest: "{{ ca_certificate.path }}"
+    mode: 0640
+  check_mode: no
+  when: >
+    (acpr_cluster_credentials[0]['certificateAuthority'] | default('') | length > 0)
+
+- name: Obtain user's token using username and password
+  k8s_auth:
+    username: "{{ acpr_cluster_credentials[0]['username'] | default('') }}"
+    password: "{{ acpr_cluster_credentials[0]['password'] | default('') }}"
+    validate_certs: "{{ 'no' if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default('no' if acpr_cluster_credentials is undefined) | default(False) else 'yes' }}"
+  check_mode: no
+  when: >
+    (
+      (not acpr_cluster_credentials[0]['token'] | default() | string | length > 0) and
+      (acpr_cluster_credentials[0]['username'] | default() | string | length > 0) and
+      (acpr_cluster_credentials[0]['password'] | default() | string | length > 0)
+    )
+  register: k8s_auth_results
+
+- name: Set 'api_key' variable
+  check_mode: no
+  set_fact:
+    api_key: "{{ k8s_auth_results.k8s_auth.api_key | default(acpr_cluster_credentials[0]['token']) | default() | string }}"

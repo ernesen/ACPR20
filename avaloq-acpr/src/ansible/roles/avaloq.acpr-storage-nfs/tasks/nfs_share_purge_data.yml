@@ -1,0 +1,68 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- block:
+    - name: Login to OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: login.yml
+
+    - name: 'get pv of pvc ({{ item.namespace }}:{{ item.name }})'
+      command: "oc --match-server-version=true get pvc {{ item.name }} -n {{ item.namespace }} -o jsonpath='{.spec.volumeName}'"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: pv_name
+      changed_when: false
+      check_mode: no
+
+    - name: 'get nfs server of pv ({{ item.namespace }}:{{ pv_name.stdout }})'
+      command: "oc --match-server-version=true get pv {{ pv_name.stdout }} -n {{ item.namespace }} -o jsonpath='{.spec.nfs.server}'"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: pv_nfs_server
+      changed_when: false
+      check_mode: no
+
+    - name: 'get nfs path of pv ({{ item.namespace }}:{{ pv_name.stdout }})'
+      command: "oc --match-server-version=true get pv {{ pv_name.stdout }} -n {{ item.namespace }} -o jsonpath='{.spec.nfs.path}'"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+      register: pv_nfs_path
+      changed_when: false
+      check_mode: no
+
+    - name: 'get folder content {{ pv_nfs_path.stdout }} on server {{ pv_nfs_server.stdout }}'
+      command: 'ls {{ pv_nfs_path.stdout }}/'
+      register: path_files
+      changed_when: false
+      become: true
+      delegate_to: '{{ pv_nfs_server.stdout }}'
+      check_mode: no
+
+    - name: 'delete content of pv {{ pv_nfs_path.stdout }} on server {{ pv_nfs_server.stdout }}'
+      file:
+        path: '{{ pv_nfs_path.stdout }}/{{ path }}'
+        state: absent
+      loop: '{{ path_files.stdout_lines }}'
+      loop_control:
+        loop_var: path
+      become: true
+      delegate_to: '{{ pv_nfs_server.stdout }}'
+      when: nfs_purge_data
+
+  always:
+    - name: Logout from OpenShift
+      include_role:
+        name: avaloq.acpr-auth
+        tasks_from: logout.yml

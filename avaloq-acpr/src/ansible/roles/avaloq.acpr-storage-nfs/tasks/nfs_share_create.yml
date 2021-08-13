@@ -1,0 +1,32 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Export {{ item.pv_count }} NFS shares of size {{ item.pv_size }}, access mode {{ pv_access_mode_abbrev[item.pv_access_mode] }}
+  lineinfile:
+    line: "{{ pv_nfs_shares_dir }}/pv-{{ pv_access_mode_abbrev[item.pv_access_mode] | lower }}-{{ item.pv_size | lower }}-{{ idx }} *(rw,root_squash)"
+    path: /etc/exports.d/openshift-pvs.exports
+    create: yes
+  loop: "{{ range(1, item.pv_count+1) | list }}"
+  loop_control:
+    loop_var: idx
+  notify: Reload nfs-server service
+  when: item.pv_backend_type == "nfs"
+
+- name: Export {{ acpr_nfs_shares_directory_path }}
+  lineinfile:
+    line: "{{ acpr_nfs_shares_directory_path }} *(rw,no_root_squash)"
+    path: /etc/exports.d/openshift-nfs-provisioner.exports
+    create: yes
+  notify: Reload nfs-server service
+  when: item.pv_backend_type == "nfs-provisioner"

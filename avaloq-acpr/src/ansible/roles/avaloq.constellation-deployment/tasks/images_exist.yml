@@ -1,0 +1,49 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check if the registry contains the image with specific tag
+  uri:
+    url: "https://{% if item is match(\"^[A-Za-z0-9]*/\") %}{{ acd_registry_url }}/v2/{{ item.split(\":\")[0] }}{% else %}{% set _url = 'https://' + item %}{{ _url | urlsplit('hostname') }}/v2{{ _url.split(':')[1] | urlsplit('path') }}{% endif %}/tags/list"
+    return_content: yes
+    user: "{{ acd_registry_username }}"
+    password: "{{ acd_registry_password }}"
+    force_basic_auth: "{% if acd_registry_username != \"\" and acd_registry_password != \"\" %}true{% else %}false{% endif %}"
+    method: GET
+    headers:
+      Content-Type: application/json
+  register: output
+  environment:
+    http_proxy: "{{ acd_http_proxy|default(lookup('env', 'http_proxy')) }}"
+    https_proxy: "{{ acd_https_proxy|default(lookup('env', 'https_proxy')) }}"
+    no_proxy: "{{ acd_no_proxy|default(lookup('env', 'no_proxy')) }}"
+  failed_when: false
+  when:
+    (
+      (item is match('^[A-Za-z0-9]*/') and acd_registry_url | length > 0)
+      or
+      (item is match('^[-a-zA-Z0-9.]{1,256}\/[a-z-A-Z0-9-]+\/[a-zA-Z0-9-]+:[a-zA-Z0-9._]+'))
+    )
+    and
+    (
+      (item is defined and item | length > 0)
+    )
+  loop: "{{ lookup('file', acd_image_file).splitlines() }}"
+
+- name: Check if images have signatures
+  include_tasks: helpers/image_signatures.yml
+  loop: "{{ lookup('file', acd_image_file).splitlines() }}"
+  loop_control:
+    loop_var: element
+  when:
+    - acd_signature_existence|bool

@@ -1,0 +1,66 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Generate directory structure
+  block:
+  - name: construct dir name
+    set_fact:
+      workdir: '{{ avq_acpr_home }}/{{ openshift_master_cluster_public_hostname }}/{{ role_name }}'
+
+  - name: clean up previous data
+    file:
+      name: '{{ workdir }}'
+      state: absent
+
+  - name: Create emtpy structure node status file
+    file:
+      path: '{{ item.path }}'
+      state: '{{ item.state }}'
+    loop:
+      - { path: '{{ workdir }}', state: directory}
+      - { path: '{{ workdir }}/acpr_status.txt', state: touch}
+
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Include ACPR repo version checks
+  import_tasks: acpr-repo.yml
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Include ACPR docker images checks
+  block:
+    - include_tasks: docker-images-summary.yml
+    - include_tasks: docker-images-summary-detailed.yml
+  when: openshift_node_group_name is defined
+
+- name: populate package facts
+  package_facts:
+
+- name: Include docker version checks
+  import_tasks: docker.yml
+  when: "'docker' in ansible_facts.packages"
+
+- name: Include Openshift version checks
+  import_tasks: openshift.yml
+  when: "'atomic-openshift-node' in ansible_facts.packages"
+
+- name: Include SOS report
+  import_tasks: sosreport.yml
+  when: generate_sosreport
+
+- name: Include registry check
+  import_tasks: registry-check.yml

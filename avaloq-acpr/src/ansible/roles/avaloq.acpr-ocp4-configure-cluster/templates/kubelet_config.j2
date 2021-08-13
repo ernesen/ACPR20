@@ -1,0 +1,12 @@
+#jinja2: trim_blocks:False
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr
+spec:
+  machineConfigPoolSelector:
+    matchLabels:
+      pools.operator.machineconfiguration.openshift.io/{{ item.key }}: ''
+  kubeletConfig:
+    systemReserved:
+      {%if item.value.cpu is defined%}cpu: "{{item.value.cpu}}"{%endif%}
+      {%if item.value.memory is defined%}memory: "{{item.value.memory}}"{%endif%}

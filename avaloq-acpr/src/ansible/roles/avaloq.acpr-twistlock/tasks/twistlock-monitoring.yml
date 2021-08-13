@@ -1,0 +1,132 @@
+---
+- name: Create temporary directory for Grafana dashboards deployment
+  block:
+    - name: Create temporary folder for twistlock monitoring
+      tempfile:
+        state: directory
+        suffix: _twistlock_monitoring
+      register: tmp_directory
+    - name: Set fact temporary path
+      set_fact:
+        twistlock_monitoring_directory: "{{ tmp_directory.path }}"
+- block:
+    - name: Create Alerts in Prometheus
+      copy:
+        content: |
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            labels:
+              acpr.avaloq.com/kind: prometheus-rules
+              rule-type: application
+            name: twistlock-prometheus-rules
+          data:
+            custom.rules: |
+              groups:
+              - name: twistlock-rules
+                interval: 30s
+                rules:
+                - alert: TwistlockDefendersAllNodes
+                  annotations:
+                    message: There are worker nodes without Twistlock defender pods.
+                  expr: |
+                    sum (kube_pod_status_phase{namespace=~"twistlock",phase=~"Running",pod=~"twistlock-defender.*"})
+                        < sum (kube_node_labels{label_node_role_kubernetes_io_compute="true"})
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockContainersCriticalVulnerabilities                                                                                                                                                                             [5/132]
+                  annotations:
+                    message: Twistlock detected containers with critical vulnerabilities.
+                  expr: |
+                    sum (twistlock_containers_critical_vulnerabilities) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockContainersCriticalCompliance
+                  annotations:
+                    message: Twistlock detected containers in critical state of compliance.
+                  expr: |
+                    sum (twistlock_containers_critical_compliance) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockHostsCriticalVulnerabilities
+                  annotations:
+                    message: Twistlock detected hosts with critical vulnerabilities.
+                  expr: |
+                    sum (twistlock_hosts_critical_vulnerabilities) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockHostsCriticalCompliance
+                  annotations:
+                    message: Twistlock detected hosts in critical state of compliance.
+                  expr: |
+                    sum (twistlock_hosts_critical_compliance) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockImagesCriticalVulnerabilities
+                  annotations:
+                    message: Twistlock detected images with critical vulnerabilities.
+                  expr: |
+                    sum (twistlock_images_critical_vulnerabilities) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockImagesCriticalCompliance
+                  annotations:
+                    message: Twistlock detected images in critical state of compliance.
+                  expr: |
+                    sum (twistlock_images_critical_compliance) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockServerlessCriticalVulnerabilities
+                  annotations:
+                    message: Twistlock detected serverless with critical vulnerabilities.
+                  expr: |
+                    sum (twistlock_serverless_critical_vulnerabilities) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+                - alert: TwistlockServerlessCriticalCompliance
+                  annotations:
+                    message: Twistlock detected serverless in critical state of compliance.
+                  expr: |
+                    sum (twistlock_serverless_critical_compliance) > 1
+                  for: 15m
+                  labels:
+                    severity: LOW
+        dest: "{{ twistlock_monitoring_directory }}/twistlock-prometheus-rules.yml"
+
+    - name: Generate Twistlock Grafana dashboards' configmaps
+      copy:
+        content: |
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          data:
+            {{ item | basename }}: |
+              {{ lookup('file', '{{ item }}') | indent(width=6, indentfirst=False) | regex_replace('TWISTLOCK_CONSOLE_HOSTNAME', twistlock_console_hostname) }}
+          metadata:
+            labels:
+              acpr.avaloq.com/kind: grafana-dashboards
+              dashboard-type: application
+              app: twistlock-defender
+              app.kubernetes.io/component: monitoring
+            name: {{ item | basename | regex_replace('\.json', '') }}
+        dest: "{{ twistlock_monitoring_directory }}/{{ item | basename | regex_replace('json', 'yml') }}"
+      with_fileglob: "{{ role_path }}/files/grafana-dashboards/*"
+
+    - name: Deploy Twistlock Grafana dashboards
+      command: "oc --match-server-version=true apply -n {{ twistlock_namespace }} -f {{ twistlock_monitoring_directory }}"
+      environment:
+        KUBECONFIG: '{{ KUBECONFIG }}'
+  always:
+    - name: Remove all temporary files
+      file:
+        path: "{{ twistlock_monitoring_directory }}"
+        state: absent

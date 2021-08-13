@@ -1,0 +1,39 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Install NetworkManager dependencies
+  yum:
+    name: NetworkManager-glib
+    state: present
+
+- name: Restart networkmanager
+  service:
+    name: NetworkManager
+    state: restarted
+
+- name: Create a new connection in NM
+  nmcli:
+    conn_name: "{{ ansible_default_ipv4['interface'] }}"
+    ifname: "{{ ansible_default_ipv4['interface'] }}"
+    type: ethernet
+    autoconnect: yes
+    state: present
+    dns4: "{{ ansible_dns['nameservers'] }}"
+
+- name: Remove old connections in NM
+  nmcli:
+    conn_name: "{{ item }}"
+    state: absent
+    with_items:
+      - "System eth0"

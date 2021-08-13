@@ -1,0 +1,13 @@
+{
+  "auths": {
+{% for k, v in acpr_container_images_registries.items() | sort %}
+{% if v['username'] is defined and v['password'] is defined %}
+    "{{ v['host'] }}": {
+      "auth": "{{ (v['username'] + ':' + v['password'] | string) | b64encode }}",
+      "email": null
+    }{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endfor %}
+  }
+}

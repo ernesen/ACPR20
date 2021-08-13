@@ -1,0 +1,87 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ReplicationController
+    metadata:
+      name: twistlock-console
+    spec:
+      replicas: 1
+      selector:
+        name: twistlock-console
+      template:
+        metadata:
+          name: twistlock-console
+          labels:
+            name: twistlock-console
+        spec:
+          restartPolicy: Always
+          serviceAccountName: twistlock-console-user
+          nodeSelector:
+            node-role.kubernetes.io/compute: "true"
+          containers:
+            - name: twistlock-console
+              image: {{ twistlock_console_image }}
+              ports:
+                - name: mgmt-https
+                  containerPort: 8083
+                - name: communication
+                  containerPort: 8084
+                - name: mgmt-http
+                  containerPort: 8081
+              env:
+                - name: CONSOLE_CN
+                  value: ""
+                - name: HIGH_AVAILABILITY_ENABLED
+                  value: "false"
+                - name: CONFIG_PATH
+                  value: /data/config/twistlock.cfg
+                - name: LOG_PROD
+                  value: "true"
+                - name: DATA_RECOVERY_ENABLED
+                  value: "true"
+                - name: COMMUNICATION_PORT
+                  value: "8084"
+                - name: MANAGEMENT_PORT_HTTPS
+                  value: "8083"
+                - name: MANAGEMENT_PORT_HTTP
+                  value: "8081"
+                - name: SCAP_ENABLED
+                  value: ""
+              securityContext:
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: twistlock-config-volume
+                  mountPath: "/data/config/"
+                - name: console-persistent-volume
+                  mountPath: "/var/lib/twistlock"
+                  subPath: "var/lib/twistlock"
+                - name: console-persistent-volume
+                  mountPath: "/var/lib/twistlock-backup"
+                  subPath: "var/lib/twistlock-backup"
+                - name: syslog-socket
+                  mountPath: "/dev/log"
+          volumes:
+            - name: console-persistent-volume
+              persistentVolumeClaim:
+                claimName: twistlock-console
+            - name: syslog-socket
+              hostPath:
+                path: "/dev/log"
+            - name: twistlock-config-volume
+              configMap:
+                name: twistlock-console

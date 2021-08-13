@@ -1,0 +1,177 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Apply LDAP identity provider dependencies
+  block:
+    - name: Apply 'openshift-config/ldap-secret' Secret object
+      diff: yes
+      k8s:
+        api_key: "{{ api_key }}"
+        kubeconfig: "{{ authfile | default(omit) }}"
+        state: present
+        api_version: v1
+        kind: Secret
+        name: "{{ item.ldap.bindPassword.name | default('ldap-secret') }}"
+        namespace: openshift-config
+        definition:
+          metadata:
+            labels:
+              app.kubernetes.io/managed-by: avaloq-acpr
+          data:
+            bindPassword: "{{ item.ldap.bindPassword.content | default(item.bindPassword) | b64encode }}"
+        merge_type: merge
+      when: >
+        (item.ldap.bindPassword is defined) or (item.bindPassword is defined)
+      loop: "{{ acpr_master_identity_providers }}"
+
+    - name: Apply 'openshift-config/ca-config-map' ConfigMap object
+      diff: yes
+      k8s:
+        api_key: "{{ api_key }}"
+        kubeconfig: "{{ authfile | default(omit) }}"
+        state: present
+        api_version: v1
+        kind: ConfigMap
+        name: "{{ item.ldap.ca.name | default('ca-config-map') }}"
+        namespace: openshift-config
+        definition:
+          metadata:
+            labels:
+              app.kubernetes.io/managed-by: avaloq-acpr
+          data:
+            ca.crt: "{{ item.ldap.ca.content | default(item.ca) | default() }}"
+        merge_type: merge
+      when: >
+        (item.ldap.ca is defined) or (item.kind is defined and item.kind == "LDAPPasswordIdentityProvider")
+      loop: "{{ acpr_master_identity_providers }}"
+
+- name: Apply OpenID Connect identity provider dependencies
+  block:
+    - name: Apply 'openshift-config/openid-secret' Secret object
+      diff: yes
+      k8s:
+        api_key: "{{ api_key }}"
+        kubeconfig: "{{ authfile | default(omit) }}"
+        state: present
+        api_version: v1
+        kind: Secret
+        name: "{{ item.openID.clientSecret.name | default('openid-secret') }}"
+        namespace: openshift-config
+        definition:
+          metadata:
+            labels:
+              app.kubernetes.io/managed-by: avaloq-acpr
+          data:
+            clientSecret: "{{ item.openID.clientSecret.content | default(item.client_secret) | b64encode }}"
+        merge_type: merge
+      when: >
+        (item.openID.clientSecret is defined) or (item.client_secret is defined)
+      loop: "{{ acpr_master_identity_providers }}"
+
+    - name: Apply 'openshift-config/openid-configmap' ConfigMap object
+      diff: yes
+      k8s:
+        api_key: "{{ api_key }}"
+        kubeconfig: "{{ authfile | default(omit) }}"
+        state: present
+        api_version: v1
+        kind: ConfigMap
+        name: "{{ item.openID.ca.name | default('openid-configmap') }}"
+        namespace: openshift-config
+        definition:
+          metadata:
+            labels:
+              app.kubernetes.io/managed-by: avaloq-acpr
+          data:
+            ca.crt: "{{ item.openID.ca.content | default(item.ca) | default() }}"
+        merge_type: merge
+      when: >
+        (item.openID.ca is defined) or (item.kind is defined and item.kind == "OpenIDIdentityProvider")
+      loop: "{{ acpr_master_identity_providers }}"
+
+- name: Format 'acpr_master_htpasswd_file' variable
+  no_log: true
+  check_mode: no
+  set_fact:
+    acpr_master_htpasswd_file: "{{ acpr_master_htpasswd_file | default(avq_acpr_home + os_cluster_name + \"-htpasswd\") | default() }}"
+
+- name: Read content of 'acpr_master_htpasswd_file' file
+  check_mode: no
+  no_log: true
+  set_fact:
+    acpr_master_htpasswd_file: "{{ lookup('file', acpr_master_htpasswd_file, errors='ignore') }}"
+
+- name: Apply 'openshift-config/htpass-secret' Secret object
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: v1
+    kind: Secret
+    name: htpass-secret
+    namespace: openshift-config
+    state: present
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      data:
+        htpasswd: "{{ acpr_master_htpasswd_file | b64encode }}"
+    merge_type: merge
+
+- name: Format 'acpr_master_identity_providers' variable
+  set_fact:
+    acpr_master_identity_providers: |
+      {% set result = [] %}
+      {% for provider in acpr_master_identity_providers %}
+      {% if provider.kind is defined and provider.kind == "LDAPPasswordIdentityProvider" %}
+      {{ result.append({"ldap": {"attributes": provider.attributes, "bindDN": provider.bindDN,"bindPassword": {"name": "ldap-secret"},"ca": {"name": "ca-config-map"},"insecure": provider.insecure | default(false),"url": provider.url}, "mappingMethod": provider.mappingMethod | default("claim"), "name": provider.name, "type": "LDAP"}) }}
+      {%- elif provider.kind is defined and provider.kind == "HTPasswdPasswordIdentityProvider" %}
+      {{ result.append({"name": provider.name, "mappingMethod": "claim", "type": "HTPasswd", "htpasswd": {"fileData": {"name": "htpass-secret"}}}) }}
+      {%- elif provider.kind is defined and provider.kind == "OpenIDIdentityProvider" %}
+      {{ result.append({"name": provider.name, "mappingMethod": provider.mappingMethod | default("claim"), "type": "OpenID", "openID": {"clientID": provider.client_id, "clientSecret": {"name": "openid-secret"}, "claims": provider.claims, "issuer": provider.urls.authorize}}) }}
+      {%- else %}
+      {{ result.append(provider) }}
+      {%- endif %}
+      {% endfor %}
+      {{ result }}
+
+- name: Apply 'OAuth' ConfigMap object
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: config.openshift.io/v1
+    kind: OAuth
+    name: cluster
+    state: present
+    merge_type: merge
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      spec:
+        identityProviders: "{{ acpr_master_identity_providers }}"
+
+- name: Remove default kube-admin user
+  diff: yes
+  k8s:
+    api_key: '{{ api_key }}'
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: v1
+    kind: Secret
+    name: kubeadmin
+    namespace: kube-system
+    state: absent
+  when: acpr_cluster_remove_kubeadmin|bool

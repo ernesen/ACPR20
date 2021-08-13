@@ -1,0 +1,359 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[masters]
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }}
+{% endif %}
+{% endfor %}
+
+[nodes]
+{% if all_in_one_config %}
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-all-in-one' {% if host.labels is defined %}labels='{{ host.labels|to_json }}'{% endif %}{{''}}
+{% endif %}
+{% endfor %}
+{% else %}
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-master'  {% if host.labels is defined %}labels='{{ host.labels|to_json }}'{% endif %}{{''}}
+{% endif %}
+{% endfor %}
+{% for host in cust_infra_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-infra' {% if host.labels is defined %}labels='{{ host.labels|to_json }}'{% endif %}{{''}}
+{% endif %}
+{% endfor %}
+{% for host in cust_worker_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-compute' {% if host.labels is defined %}labels='{{ host.labels|to_json }}'{% endif %}{{''}}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+[etcd]
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }}
+{% endif %}
+{% endfor %}
+
+[new_nodes]
+{% for host in cust_worker_hosts %}
+{% if host.new_node | default(false) | bool is sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-compute'
+{% endif %}
+{% endfor %}
+{% for host in cust_infra_hosts %}
+{% if host.new_node | default(false) | bool is sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-infra'
+{% endif %}
+{% endfor %}
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-master'
+{% endif %}
+{% endfor %}
+
+[new_masters]
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-master'
+{% endif %}
+{% endfor %}
+
+[new_etcd]
+{% for host in cust_master_hosts %}
+{% if host.new_node | default(false) | bool is sameas true %}
+{{ host.fqdn }} openshift_node_group_name='node-config-master'
+{% endif %}
+{% endfor %}
+
+
+{% if cust_nfs_hosts is defined %}
+[nfs]
+{% for host in cust_nfs_hosts %}
+{% if host.new_node | default(false) | bool is not sameas true %}
+{{ host.fqdn }}
+{% endif %}
+{% endfor %}
+
+{% endif %}
+{% if cust_lb_host is defined %}
+[lb]
+{{ cust_lb_host }}
+{% endif %}
+
+{% if cust_gluster_hosts is defined %}
+[glusterfs]
+{% for host in cust_gluster_hosts %}
+{{ host.fqdn }} glusterfs_devices='["{{ host.dev }}"]'
+{% endfor %}
+
+[glusterfs_registry]
+{% endif %}
+
+[OSEv3:children]
+masters
+nodes
+etcd
+new_nodes
+new_masters
+new_etcd
+{% if cust_nfs_hosts is defined %}
+nfs
+{% endif %}
+{% if cust_lb_host is defined %}
+lb
+{% endif %}
+{% if cust_gluster_hosts is defined %}
+glusterfs
+glusterfs_registry
+{% endif %}
+
+[OSEv3:vars]
+product_type=openshift
+openshift_release={{ avq_os_release }}
+{% if cust_os_version is version_compare(avq_os_release,'>') %}
+openshift_image_tag={{ cust_os_version }}
+openshift_pkg_version={{ cust_os_version | regex_replace('^v', '-') }}
+{% endif %}
+openshift_deployment_type={{ avq_os_type }}
+ansible_ssh_user={{ cust_ansible_ssh_user }}
+{% if cust_ansible_become is defined %}
+ansible_become={{ cust_ansible_become }}
+{% endif %}
+openshift_clock_enabled=true
+openshift_install_examples=false
+## OpenShift - Avaloq specific naming
+openshift_master_default_subdomain={{ cust_os_def_subdomain }}
+openshift_master_cluster_public_hostname={{ cust_os_cluster_name }}
+openshift_master_cluster_hostname={{ cust_os_cluster_internal_name }}
+openshift_master_cluster_method=native
+openshift_master_public_console_url=https://{{ cust_os_cluster_name }}{% if all_in_one_config and cust_lb_host is not defined %}:8443{% elif cust_os_cluster_port is defined and cust_os_cluster_port != '443' %}:{{ cust_os_cluster_port }}{% endif %}/console
+openshift_master_public_api_url=https://{{ cust_os_cluster_name }}{% if all_in_one_config and cust_lb_host is not defined %}:8443{% elif cust_os_cluster_port is defined and cust_os_cluster_port != '443' %}:{{ cust_os_cluster_port }}{% endif %}{{''}}
+
+{% if cust_master_identity_providers is defined %}
+openshift_master_identity_providers={{ cust_master_identity_providers | to_json }}
+{% if cust_master_ldap_ca is defined %}
+openshift_master_ldap_ca={{ cust_master_ldap_ca }}
+{% elif  cust_master_ldap_ca_file is defined%}
+openshift_master_ldap_ca_file={{ cust_master_ldap_ca_file }}
+{% endif %}
+{% if cust_master_openid_ca is defined %}
+openshift_master_openid_ca={{ cust_master_openid_ca }}
+{% elif  cust_master_openid_ca_file is defined%}
+openshift_master_openid_ca_file={{ cust_master_openid_ca_file }}
+{% endif %}
+{% else %}
+openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider'}]
+{% if cust_master_htpasswd_file is not defined %}
+openshift_master_htpasswd_file={{ avq_acpr_home + cust_os_cluster_name }}-htpasswd
+{% endif %}
+{% endif %}
+{% if cust_master_htpasswd_file is defined %}
+openshift_master_htpasswd_file={{ cust_master_htpasswd_file }}
+{% endif %}
+
+{% if cust_master_certificates is defined %}
+## Master API and console custom certificate
+openshift_master_overwrite_named_certificates=true
+openshift_master_named_certificates={{ cust_master_certificates }}
+{% endif %}
+
+{% if cust_router_certificate is defined %}
+## Router custom certificate
+openshift_hosted_router_certificate={{ cust_router_certificate }}
+{% endif %}
+
+##Docker specific options
+openshift_docker_options="--log-driver=json-file --log-opt max-size=10M --log-opt max-file=1"
+openshift_disable_check=docker_image_availability
+
+{% if cust_http_proxy is defined or cust_https_proxy is defined %}
+##Proxy and Networking
+openshift_http_proxy={{ cust_http_proxy }}
+openshift_https_proxy={{ cust_https_proxy }}
+openshift_no_proxy={{ cust_no_proxy }}
+{% endif %}
+
+osm_cluster_network_cidr={{ cust_clus_net_cidr }}
+osm_host_subnet_length={{ cust_clus_subnet_length }}
+openshift_portal_net={{ cust_clus_portal_cidr }}
+
+os_sdn_network_plugin_name='redhat/openshift-ovs-networkpolicy'
+
+## Logging and logging storage
+openshift_logging_use_ops=true
+openshift_logging_install_logging=true
+openshift_logging_image_version={{ cust_os_version | default(avq_os_release) }}
+openshift_logging_curator_ops_cpu_limit=100m
+openshift_logging_elasticsearch_kibana_index_mode=shared_ops
+openshift_logging_install_eventrouter=true
+openshift_logging_eventrouter_nodeselector={"node-role.kubernetes.io/infra": "true"}
+openshift_logging_fluentd_nodeselector={ "logging-infra-fluentd":"true" }
+openshift_prometheus_namespace=acpr-monitoring
+{% if cust_logging_es_sc_name is defined %}
+openshift_logging_es_pvc_storage_class_name={{ cust_logging_es_sc_name }}
+{% endif %}
+{% if cust_logging_es_ops_sc_name is defined %}
+openshift_logging_es_ops_pvc_storage_class_name={{ cust_logging_es_ops_sc_name }}
+{% endif %}
+
+## Set up elasticsearch and OPS elasticsearch cluster parameters
+{% if all_in_one_config %}
+{% set es_cluster_size = 1 %}
+{% set es_number_of_shards = 1 %}
+{% else %}
+{% set es_cluster_size = 3 %}
+{% set es_number_of_shards = 3 %}
+{% endif %}
+
+# elasticsearch cluster
+openshift_logging_es_cluster_size={{ es_cluster_size }}
+openshift_logging_es_nodeselector={{ cust_logging_nodeselector }}
+openshift_logging_es_cpu_limit={{ cust_logging_es_cpu_limit }}
+openshift_logging_es_cpu_request={{ cust_logging_es_cpu_request }}
+openshift_logging_es_memory_limit={{ cust_logging_es_memory_limit }}
+openshift_logging_es_number_of_replicas=1
+openshift_logging_es_number_of_shards={{ es_number_of_shards }}
+{% if cust_logging_es_pvc_size is defined %}
+openshift_logging_es_pvc_size={{ cust_logging_es_pvc_size }}
+openshift_logging_es_pvc_dynamic=false
+{% endif %}
+{% if cust_logging_es_kibana_hostname is defined %}
+openshift_logging_kibana_hostname={{ cust_logging_es_kibana_hostname }}
+{% else %}
+openshift_logging_kibana_hostname=kibana.{{ cust_os_def_subdomain }}
+{% endif %}
+openshift_logging_kibana_nodeselector={{ cust_logging_nodeselector }}
+openshift_logging_curator_nodeselector={{ cust_logging_nodeselector }}
+
+# OPS elasticsearch cluster
+openshift_logging_es_ops_cluster_size={{ es_cluster_size }}
+openshift_logging_es_ops_nodeselector={{ cust_logging_nodeselector }}
+openshift_logging_es_ops_cpu_limit={{ cust_logging_es_ops_cpu_limit }}
+openshift_logging_es_ops_cpu_request={{ cust_logging_es_ops_cpu_request }}
+openshift_logging_es_ops_memory_limit={{ cust_logging_es_ops_memory_limit }}
+openshift_logging_es_ops_number_of_replicas=1
+openshift_logging_es_ops_number_of_shards={{ es_number_of_shards }}
+{% if cust_logging_es_ops_pvc_size is defined %}
+openshift_logging_es_ops_pvc_size={{ cust_logging_es_ops_pvc_size }}
+openshift_logging_es_ops_pvc_dynamic=false
+{% endif %}
+{% if cust_logging_es_ops_kibana_hostname is defined %}
+openshift_logging_kibana_ops_hostname={{ cust_logging_es_ops_kibana_hostname }}
+{% else %}
+openshift_logging_kibana_ops_hostname=kibana-ops.{{ cust_os_def_subdomain }}
+{% endif %}
+openshift_logging_kibana_ops_nodeselector={{ cust_logging_nodeselector }}
+openshift_logging_curator_ops_nodeselector={{ cust_logging_nodeselector }}
+
+{% if cust_masterapi_enable_audit %}
+# Master API logging
+openshift_master_audit_config='{"enabled": true, "auditFilePath": "/var/lib/origin/master-api-audit.log", "maximumFileRetentionDays": {{ cust_masterapi_audit_retention_days }}, "maximumFileSizeMegabytes": {{ cust_masterapi_audit_max_filesize }}, "maximumRetainedFiles": {{ cust_masterapi_audit_retention_files }}}'
+{% endif %}
+
+# Disable service catalog
+openshift_enable_service_catalog=false
+template_service_broker_install=false
+ansible_service_broker_install=false
+
+openshift_is_containerized=false
+openshift_hosted_manage_registry=false
+
+openshift_use_crio=false
+openshift_enable_unsupported_configurations=True
+
+openshift_router_selector={{ cust_router_selector }}
+{% if cust_default_node_selector is defined %}
+openshift_master_config_node_selector="{{ cust_default_node_selector }}"
+{% endif %}
+
+{% if cust_registry_location is defined %}
+{%- if cust_docker_additional_registries is defined %}
+{% set cust_container_images_registries=cust_docker_additional_registries %}
+{% endif %}
+oreg_url='{{ cust_registry_location }}/ose-${component}:${version}'
+openshift_examples_modify_imagestreams=true
+osm_etcd_image='{{ cust_registry_location | regex_replace('\/openshift3','') }}/rhel7/etcd:{{ avq_etcd_versions[cust_os_version]|default(avq_etcd_versions["default"]) }}'
+openshift_docker_ent_reg=''
+openshift_docker_use_etc_containers=true
+openshift_docker_additional_registries='{{ cust_registry_location.split('/')[0] }}{% if cust_container_images_registries is defined %}{% for k, v in cust_container_images_registries.items() %}{% if v['host'].split('/')[0]  != cust_registry_location.split('/')[0] %},{{ v['host'].split('/')[0] }}{% endif %}{% endfor %}{% endif %}'
+openshift_docker_blocked_registries='all'
+{% if cust_container_images_registries is defined %}
+{% for k, v in cust_container_images_registries.items()  %}
+{% if v['host'].split('/')[0]  == cust_registry_location.split('/')[0]  %}
+{% if v['username'] is defined and v['password'] is defined %}
+oreg_auth_user='{{ v['username'] }}'
+oreg_auth_password='{{ v['password'] }}'
+{% else %}
+{% if cust_registry_auth_user is defined %}
+oreg_auth_user='{{ cust_registry_auth_user }}'
+oreg_auth_password='{{ cust_registry_auth_password }}'
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if cust_registry_auth_user is defined %}
+oreg_auth_user='{{ cust_registry_auth_user }}'
+oreg_auth_password='{{ cust_registry_auth_password }}'
+{% endif %}
+{% endif %}
+{% endif %}
+openshift_additional_registry_credentials=[{% if cust_container_images_registries is defined %}{% for k, v in cust_container_images_registries.items() %}{% if output is not defined %}{% set output = '' %}{% endif %}{% if v['username'] is defined and v['password'] is defined %}{% set output = output + "{'host':'"+v['host'].split('/')[0]  +"','user':'"+v['username']+"','password':'"+v['password'] | string+"','test_login':'"+v['test_login'] | default('False')+"'}," %}{% elif v['host'] == cust_registry_location.split('/')[0]  and cust_registry_auth_user is defined and cust_registry_auth_password is defined %}{% set output = output + "{'host':'"+v['host'].split('/')[0]  +"','user':'"+cust_registry_auth_user+"','password':'"+cust_registry_auth_password | string+"','test_login':'"+v['test_login'] | default('False')+"'}," %}{% endif %}{% if loop.last %}{{ output[:-1] }}{% endif %}{% endfor %}{% else %}{% if cust_registry_auth_user is defined and cust_registry_auth_password is defined%}{'host':'{{ cust_registry_location.split('/')[0]  }}','user':'{{ cust_registry_auth_user }}','password':'{{ cust_registry_auth_password }}','test_login':'False'}{% endif %}{% endif %}]
+
+openshift_docker_signature_verification={{ cust_container_images_signature_verification }}
+openshift_enable_olm=false
+openshift_cluster_monitoring_operator_install=false
+openshift_node_problem_detector_install=false
+
+{% if cust_lb_host is defined and (cust_os_cluster_port is not defined or cust_os_cluster_port != '8443') %}
+openshift_loadbalancer_additional_frontends=[{"name": "openshift-api-{{ cust_os_cluster_port | default(443) }}","mode": "tcp","options": ["tcplog"],"binds": ["*:{{ cust_os_cluster_port | default(443) }}"],"default_backend": "atomic-openshift-api"}]
+{% endif %}
+
+openshift_console_hostname={{ cust_os_console_hostname | default("console." + cust_os_def_subdomain) }}
+openshift_console_cert={{ cust_os_console_cert_file | default('""') }}
+openshift_console_key={{ cust_os_console_key_file | default('""') }}
+openshift_console_ca={{ cust_os_console_ca_file | default('""') }}
+
+{% if cust_docker_storage_device is defined -%}
+container_runtime_docker_storage_type=overlay2
+container_runtime_docker_storage_setup_device={{ cust_docker_storage_device }}
+{%- endif %}
+
+#Upgrades
+#disable pre and post storage migration to speed up the process. The tasks are performed independently.
+openshift_upgrade_pre_storage_migration_enabled=false
+openshift_upgrade_post_storage_migration_enabled=false
+
+{% if cust_gluster_hosts is defined %}
+openshift_storage_glusterfs_timeout=900
+openshift_storage_glusterfs_namespace={{ cust_storage_glusterfs['namespace'] }}
+openshift_storage_glusterfs_storageclass={{ cust_storage_glusterfs['storageclass'] }}
+openshift_storage_glusterfs_storageclass_default={{ cust_storage_glusterfs['storageclass_default'] }}
+openshift_storage_glusterfs_block_storageclass={{ cust_storage_glusterfs['block_storageclass'] }}
+openshift_storage_glusterfs_block_storageclass_default={{ cust_storage_glusterfs['block_storageclass_default'] }}
+openshift_storage_glusterfs_block_deploy={{ cust_storage_glusterfs['block_deploy'] }}
+openshift_storage_glusterfs_block_host_vol_create=true
+openshift_storage_glusterfs_block_host_vol_size={{ cust_storage_glusterfs['block_host_vol_size'] }}
+openshift_storage_glusterfs_image={{ cust_registry_location | regex_replace('\/openshift3','') }}/rhgs3/rhgs-server-rhel7:{{ avq_os_release }}
+openshift_storage_glusterfs_block_image={{ cust_registry_location | regex_replace('\/openshift3','') }}/rhgs3/rhgs-gluster-block-prov-rhel7:{{ avq_os_release }}
+openshift_storage_glusterfs_s3_image={{ cust_registry_location | regex_replace('\/openshift3','') }}/rhgs3/rhgs-s3-server-rhel7:{{ avq_os_release }}
+openshift_storage_glusterfs_heketi_image={{ cust_registry_location | regex_replace('\/openshift3','') }}/rhgs3/rhgs-volmanager-rhel7:{{ avq_os_release }}
+openshift_storage_glusterfs_wipe={{ cust_storage_glusterfs['wipe_devices'] }}
+{%- endif %}

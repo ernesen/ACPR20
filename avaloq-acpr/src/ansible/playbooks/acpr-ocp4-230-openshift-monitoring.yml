@@ -1,0 +1,174 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [4]
+
+- name: Verify user in 'acpr_cluster_credentials' variable has required type
+  import_playbook: helper_playbooks/cluster_credentials.yml
+  vars:
+    cluster_credentials_required_type: 'cluster-admin-user'
+  when: acpr_cluster_credentials is defined
+
+- name: ACPR | Configure 'openshift-monitoring' using Avaloq Installator
+  hosts: localhost
+  become: false
+  pre_tasks:
+    - name: Generate kubeconf path
+      set_fact:
+        KUBECONFIG: '/tmp/acpr-kube-{{ 10000000|random }}/config'
+    - name: Create kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        mode: 0700
+        state: directory
+  post_tasks:
+    - name: Cleanup kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        state: absent
+  roles:
+    - role: avaloq.constellation-deployment
+      vars:
+        acd_namespace: 'openshift-monitoring'
+        acd_inst_params: '--ignore-unspecified-objects'
+        acd_image_existence: False
+        acd_inst_lint: False
+        acd_const_loc: "{{ acpr_constellations_path | default( playbook_dir + '/../../constellations') }}/openshift-monitoring"
+  tasks:
+    - name: Define 'restart_required' variable
+      no_log: true
+      set_fact:
+        restart_required: [ ]
+
+    - name: Check if restart of openshift-monitoring pods is required
+      no_log: true
+      set_fact:
+        restart_required: "{{ restart_required + [ 'true' ] }}"
+      when: item in constellation_commands_cluster_admin | string
+      loop:
+        - prometheus-k8s-htpasswd.yml
+        - thanos-querier-oauth-htpasswd.yml
+        - prometheus.yml
+
+    - block:
+        - name: acpr login
+          import_role:
+            name: avaloq.acpr-ocp4-auth
+            tasks_from: login.yml
+
+        - name: Get Grafana Deployment
+          check_mode: no
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: Deployment
+            namespace: openshift-monitoring
+            name: grafana
+          register: grafana_deployment
+
+        - name: Scale down Grafana Deployment
+          k8s_scale:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: Deployment
+            namespace: openshift-monitoring
+            name: grafana
+            replicas: 0
+
+        - name: Wait until Grafana Deployment is scaled down
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: Deployment
+            namespace: openshift-monitoring
+            name: grafana
+          until: '"readyReplicas" not in grafana.resources.0.status'
+          retries: 120
+          delay: 10
+          register: grafana
+
+        - name: Scale up Grafana Deployment
+          k8s_scale:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: Deployment
+            namespace: openshift-monitoring
+            name: grafana
+            replicas: "{{ grafana_deployment.resources[0].status.replicas }}"
+            wait_timeout: 120
+
+        - name: Get Prometheus StatefulSet
+          check_mode: no
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: StatefulSet
+            namespace: openshift-monitoring
+            name: prometheus-k8s
+          register: prometheus_statefulset
+
+        - name: Scale down Prometheus StatefulSet
+          k8s_scale:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: StatefulSet
+            namespace: openshift-monitoring
+            name: prometheus-k8s
+            replicas: 0
+
+        - name: Wait until Prometheus StatefulSet is scaled down
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: StatefulSet
+            namespace: openshift-monitoring
+            name: prometheus-k8s
+          until: '"readyReplicas" not in prometheus.resources.0.status'
+          retries: 120
+          delay: 10
+          register: prometheus
+
+        - name: Scale up Prometheus StatefulSet
+          k8s_scale:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: StatefulSet
+            namespace: openshift-monitoring
+            name: prometheus-k8s
+            wait_timeout: 120
+            replicas: "{{ prometheus_statefulset.resources[0].status.replicas }}"
+
+      when: restart_required | length > 0
+      module_defaults:
+        group/k8s:
+          host: "{{ acpr_cluster_credentials[0]['url'] | default('https://api.{{ os_cluster_name }}:6443') }}"
+          ca_cert: "{{ acpr_cluster_credentials[0]['certificateAuthorityPath'] | default(ca_certificate.path) | default('') }}"
+          validate_certs: "{{ 'no' if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default('no' if acpr_cluster_credentials is undefined) | default(False) else 'yes' }}"
+
+      always:
+        - name: acpr logout
+          import_role:
+            name: avaloq.acpr-ocp4-auth
+            tasks_from: logout.yml

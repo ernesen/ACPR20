@@ -1,0 +1,132 @@
+global:
+  external_labels:
+    cluster: '${AVALOQ_PROMETHEUS_CLUSTER_NAME}'
+  scrape_interval: 30s
+  scrape_timeout: 20s
+  evaluation_interval: 1m
+rule_files:
+  - 'prometheus.rules'
+  - 'rules/infrastructure/*.rules'
+  - 'rules/application/*.rules'
+scrape_configs:
+  - job_name: kubernetes-pods
+    metrics_path: /metrics
+    scheme: http
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [ __meta_kubernetes_namespace ]
+        regex: ^openshift-logging$
+        action: drop
+      - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_scrape ]
+        action: keep
+        regex: true
+      - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_scheme ]
+        action: replace
+        target_label: __scheme__
+        regex: (https?)
+      - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_path ]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [ __address__, __meta_kubernetes_pod_annotation_prometheus_io_port ]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+      - source_labels: [ __meta_kubernetes_namespace ]
+        separator: ;
+        regex: (.*)
+        target_label: kubernetes_namespace
+        replacement: $1
+        action: replace
+      - source_labels: [ __meta_kubernetes_pod_label_app ]
+        separator: ;
+        regex: (.*)
+        target_label: app
+        replacement: $1
+        action: replace
+      - source_labels: [ __meta_kubernetes_pod_label_avaloq_com_app ]
+        separator: ;
+        regex: (.*)
+        target_label: avq_app
+        replacement: $1
+        action: replace
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        separator: ;
+        regex: (.*)
+        target_label: kubernetes_pod_name
+        replacement: $1
+        action: replace
+
+      # Strimzi labels configuration
+      - source_labels: [ __meta_kubernetes_pod_label_strimzi_io_cluster ]
+        separator: ;
+        regex: (.*)
+        target_label: strimzi_io_cluster
+        replacement: $1
+        action: replace
+
+  - job_name: 'kubernetes-state-metrics'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    honor_labels: true
+    metrics_path: '/federate'
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    params:
+      'match[]':
+        - '{job=~".*kube-state-metrics.*"}'
+    basic_auth:
+      username: '${AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_USERNAME}'
+      password: '${AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_PASSWORD}'
+    metric_relabel_configs:
+      - regex: prometheus_replica
+        action: labeldrop
+    static_configs:
+      - targets:
+          - '${AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_ROUTE}'
+
+  - job_name: 'kubernetes-nodes-cadvisor'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    honor_labels: true
+    metrics_path: '/federate'
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    params:
+      'match[]':
+        - '{job=~".*kubelet.*"}'
+    basic_auth:
+      username: '${AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_USERNAME}'
+      password: '${AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_PASSWORD}'
+    static_configs:
+      - targets:
+          - '${AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_ROUTE}'
+    metric_relabel_configs:
+      - source_labels: [ pod ]
+        action: replace
+        target_label: pod_name
+        regex: (.+)
+        replacement: $1
+      - regex: prometheus_replica
+        action: labeldrop
+
+  - job_name: 'prometheus'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'alertmanager'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['alertmanager-direct:9093']
+
+alerting:
+  alertmanagers:
+    - scheme: http
+      static_configs:
+        - targets:
+            - "alertmanager-direct:9093"

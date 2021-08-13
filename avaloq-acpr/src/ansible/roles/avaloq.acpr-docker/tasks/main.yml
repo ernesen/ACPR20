@@ -1,0 +1,162 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Install, start, and configure docker daemon and registries
+  block:
+    - name: Install docker
+      yum:
+        name: ['docker', 'python-docker']
+        state: present
+
+    - name: configure docker daemon
+      template:
+        src: docker.j2
+        dest: /etc/sysconfig/docker
+        owner: root
+        group: root
+        mode: 0640
+      notify:
+        - restart docker
+
+    - name: configure container registries
+      template:
+        dest: /etc/containers/registries.conf
+        src: registries.conf.j2
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - restart docker
+
+    - name: Start and enable docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Remove existing docker config.json
+      file:
+        path: /var/lib/origin/.docker/config.json
+        state: absent
+
+    - name: Run docker login command
+      docker_login:
+        username: '{{ item.value.username }}'
+        password: '{{ item.value.password }}'
+        config_path: /var/lib/origin/.docker/config.json
+        state: present
+        registry_url: '{{ item.value.host }}'
+      loop: '{{ acpr_container_images_registries|dict2items }}'
+      when:
+        - item.value.username is defined
+        - item.value.password is defined
+      no_log: true
+
+    - name: install container image registry certificates
+      block:
+      - name: create registry certificate directory
+        block:
+          - file:
+              path: '/etc/docker/certs.d/{{ acpr_docker_registry_location | regex_replace("(:|\/)","-") }}'
+              state: directory
+              owner: root
+              group: root
+              mode: '0755'
+          - file:
+              path: '/etc/docker/certs.d/{{ item.value.host | regex_replace("(:|\/)","-")  }}'
+              state: directory
+              owner: root
+              group: root
+              mode: '0755'
+            loop: '{{ acpr_container_images_registries|dict2items }}'
+            when: >
+              (
+                (item.value.ca_certificate is defined) or
+                (item.value.host is search('service\.avaloq\.com') and acpr_registry_default_cacert is defined)
+              )
+
+      - name: install registry ca certificate
+        block:
+          - copy:
+              dest: '/etc/docker/certs.d/{{ acpr_docker_registry_location | regex_replace("(:|\/)","-") }}/{{ acpr_docker_registry_location | regex_replace("(:|\/)","-") }}.crt'
+              content: '{{ acpr_docker_registry_cacert }}'
+              owner: root
+              group: root
+              mode: '0644'
+            notify:
+              - restart docker
+            when: acpr_docker_registry_cacert is defined
+
+          - copy:
+              dest: '/etc/docker/certs.d/{{ item.value.host | regex_replace("(:|\/)","-")  }}/{{ item.value.host | regex_replace("(:|\/)","-")  }}.crt'
+              content: '{{ item.value.ca_certificate }}'
+              owner: root
+              group: root
+              mode: '0644'
+            notify:
+              - restart docker
+            when:
+              - item.value.ca_certificate is defined
+            loop: '{{ acpr_container_images_registries|dict2items }}'
+
+          - copy:
+              dest: '/etc/docker/certs.d/{{ item.value.host | regex_replace("(:|\/)","-")  }}/{{ item.value.host | regex_replace("(:|\/)","-")  }}.crt'
+              content: '{{ acpr_registry_default_cacert }}'
+              owner: root
+              group: root
+              mode: '0644'
+            notify:
+              - restart docker
+            when:
+              - item.value.host is search('service\.avaloq\.com') and acpr_registry_default_cacert is defined
+            loop: '{{ acpr_container_images_registries|dict2items }}'
+      when:
+        - acpr_docker_registry_location is defined
+
+    - block:
+        - stat:
+            path: /usr/sbin/vgs
+          register: vgs
+
+        - shell: "vgs -o vg_name --noheadings | grep docker_vg"
+          register: docker_vg_exists
+          failed_when: docker_vg_exists.rc >= 2
+          changed_when: false
+          when: vgs.stat.exists
+
+        - block:
+            - meta: flush_handlers
+            - service:
+                name: docker
+                state: stopped
+            - file:
+                path: /var/lib/docker
+                state: absent
+            - file:
+                path: /var/lib/docker
+                state: directory
+                owner: root
+                group: root
+                mode: '0711'
+          when: docker_vg_exists.rc == 1
+      when: container_runtime_docker_storage_setup_device is defined
+  become: true
+
+- name: include container images signatures verification
+  include_tasks: container-signature.yml
+
+- name: include docker-cleanup script
+  include_tasks: docker-cleanup.yml
+  when:
+    - acpr_docker_cleanup

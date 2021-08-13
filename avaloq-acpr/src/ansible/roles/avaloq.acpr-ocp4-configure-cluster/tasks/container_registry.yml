@@ -1,0 +1,81 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Format 'acpr_pull_secret' variable
+  no_log: true
+  set_fact:
+    acpr_pull_secret: "{{ acpr_pull_secret | default({}) }}"
+
+- name: Append all container registries to 'registries' variable
+  no_log: true
+  set_fact:
+    registries: "{{ registries | default([]) + [item.value.host] }}"
+  loop: "{{ lookup('dict', acpr_container_images_registries, wantlist=True) }}"
+
+- name: Append all container registries from 'acpr_pull_secret' variable to 'registries' variable
+  no_log: true
+  set_fact:
+    registries: "{{ registries | default([]) + [item.key] }}"
+  loop: "{{ lookup('dict', acpr_pull_secret.auths, wantlist=True) | default({}) }}"
+
+- name: Filter out registry duplicates
+  set_fact:
+    registries: "{{ registries|unique }}"
+
+- name: Apply 'openshift-config/pull-secret' Secret object
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    api_version: v1
+    kind: Secret
+    name: pull-secret
+    namespace: openshift-config
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      data:
+        .dockerconfigjson: "{{ lookup('template', 'openshift-config/dockerconfigjson.j2') | combine(acpr_pull_secret, recursive=True) | to_nice_json | b64encode }}"
+    merge_type: merge
+
+- name: Set 'unqualified_search_registries' variable
+  no_log: true
+  set_fact:
+    unqualified_search_registries: "unqualified-search-registries = [{% for registry in registries | sort %}'{{ registry }}'{% if not loop.last %},{% endif %}{% endfor %}]"
+
+- name: Apply 'avaloq-unqualified-search-registries.conf.j2' MachineConfig file
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    definition: "{{ lookup('template', 'avaloq-unqualified-search-registries.conf.j2') }}"
+  loop:
+    - master
+    - worker
+
+- name: Create ImageContentSourcePolicy objects
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    name: '{{ item.key }}'
+    state: present
+    merge_type: merge
+    wait: yes
+    definition: "{{ lookup('template', 'imagecontentsourcepolicy.yml.j2') }}"
+  loop: "{{ acpr_container_images_mirrors|dict2items }}"
+  when: acpr_container_images_mirrors is defined

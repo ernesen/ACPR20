@@ -1,0 +1,63 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Generate encryption key
+  shell: 'set -o pipefail && head -c 32 /dev/urandom | base64'
+  run_once: True
+  register: encryption_key_b64
+  tags:
+    - skip_ansible_lint
+
+- name: Stat encryption-config.yaml
+  stat:
+    path:  "{{ encryption_f }}"
+  register: encryption_config
+
+- name: Deploy encryption configuration to masters
+  template:
+    src: encryption-config.yaml.j2
+    dest: "{{ encryption_f }}"
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - not encryption_config.stat.exists
+  notify: restart master
+
+- name: Configure encryption
+  blockinfile:
+    path: /etc/origin/master/master-config.yaml
+    backup: yes
+    insertafter: '^  apiServerArguments:$'
+    block: |2
+          experimental-encryption-provider-config:
+          - {{ encryption_f }}
+
+- meta: flush_handlers
+
+- name: Encrypt etcd secrets (long running task)
+  command: "/usr/bin/oc --kubeconfig=/etc/origin/master/admin.kubeconfig adm migrate storage --include=secrets"
+  register: oc_migrate
+  run_once: True
+  when:
+    - not encryption_config.stat.exists
+
+- name: Encryption status error check
+  fail:
+    msg: "One or more errors occurred. Please check OpenShift master logs. {{ oc_migrate.stdout }}"
+  when:
+    - oc_migrate.changed
+    - "'errors=0' not in oc_migrate.stdout"
+  tags:
+    - skip_ansible_lint

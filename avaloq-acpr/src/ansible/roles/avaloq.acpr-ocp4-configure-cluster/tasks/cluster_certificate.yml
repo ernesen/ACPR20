@@ -1,0 +1,150 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Apply 'openshift-config/apiserver-tls' Secret object
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    api_version: v1
+    kind: Secret
+    name: apiserver-tls
+    namespace: openshift-config
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ acpr_cluster_certificates.api.certificate | default() | b64encode }}"
+        tls.key: "{{ acpr_cluster_certificates.api.key | default() | b64encode }}"
+  when: >
+    (acpr_cluster_certificates.api is defined)
+
+- name: Enable API certificate in 'APIServer'
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: config.openshift.io/v1
+    kind: APIServer
+    name: cluster
+    state: present
+    merge_type: merge
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      spec:
+        servingCerts:
+          namedCertificates:
+            - names:
+                - "api.{{ os_cluster_name.split(':')[0] }}"
+              servingCertificate:
+                name: apiserver-tls
+  when: >
+    (acpr_cluster_certificates.api is defined)
+  register: apicert
+
+- import_tasks: update_kubeconfig_ca.yml
+  when:
+    - apicert.changed | bool
+    - acpr_cluster_certificates.api is defined
+    - acpr_cluster_credentials[0]['token'] is not defined
+    - acpr_cluster_credentials[0]['username'] is not defined
+    - authfile is defined
+
+- name: Apply 'openshift-config/user-ca-bundle' ConfigMap object
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    api_version: v1
+    kind: ConfigMap
+    name: user-ca-bundle
+    namespace: openshift-config
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      data:
+        ca-bundle.crt: "{{ acpr_cluster_certificates.ingress.ca_certificate | default() + acpr_cluster_certificates.additionalTrustBundle.ca_certificate | default() }}"
+  when: >
+    (acpr_cluster_certificates.ingress is defined) or
+    (acpr_cluster_certificates.additionalTrustBundle)
+
+- name: Enable 'user-ca-bundle' CA bundle
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: config.openshift.io/v1
+    kind: Proxy
+    name: cluster
+    state: present
+    merge_type: merge
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      spec:
+        trustedCA:
+          name: user-ca-bundle
+  when: >
+    (acpr_cluster_certificates.ingress is defined) or
+    (acpr_cluster_certificates.additionalTrustBundle)
+
+- name: Apply 'openshift-config/ingresscontroller' Secret object
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    state: present
+    api_version: v1
+    kind: Secret
+    name: ingresscontroller-tls
+    namespace: openshift-ingress
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ acpr_cluster_certificates.ingress.certificate | default() | b64encode }}"
+        tls.key: "{{ acpr_cluster_certificates.ingress.key | default() | b64encode }}"
+  when: >
+    (acpr_cluster_certificates.ingress is defined)
+
+- name: Enable 'ingresscontroller-tls' certificates
+  diff: yes
+  k8s:
+    api_key: "{{ api_key }}"
+    kubeconfig: "{{ authfile | default(omit) }}"
+    api_version: operator.openshift.io/v1
+    kind: IngressController
+    name: default
+    state: present
+    namespace: openshift-ingress-operator
+    merge_type: merge
+    definition:
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: avaloq-acpr
+      spec:
+        defaultCertificate:
+          name: ingresscontroller-tls
+  when: >
+    (acpr_cluster_certificates.ingress is defined)

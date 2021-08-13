@@ -1,0 +1,91 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: install required network packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  loop:
+    - NetworkManager
+    - bind-utils
+
+- name: stop and disable firewalld.service
+  service:
+    name: firewalld.service
+    state: stopped
+    enabled: no
+  when:
+    - ansible_facts.services['firewalld.service'] is defined
+
+- name: start required network services
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: yes
+  loop:
+    - NetworkManager.service
+
+- name: blacklist veth devices in NetworkManager
+  copy:
+    dest: /etc/NetworkManager/conf.d/10-unmanage-veth.conf
+    src: networkmanager/10-unmanage-veth.conf
+    mode: 0644
+    owner: root
+    group: root
+  notify: restart NetworkManager
+
+- name: check if required network services are running
+  assert:
+    that:
+      - ansible_facts.services['{{ item }}'] is defined
+      - ansible_facts.services['{{ item }}'].state == 'running'
+    msg: 'Service {{ item }} not running on the system'
+  loop:
+    - NetworkManager.service
+
+- name: find IPv4 forwarding settings in sysctl
+  shell: "egrep -rlq '^net.ipv4.ip_forward\\s*=\\s*0' /etc/sysctl*"
+  register: sysctl_ipv4_forwarding
+  check_mode: no
+  changed_when: false
+  failed_when: false
+
+- name: check if IPv4 forwarding is disabled
+  assert:
+    that:
+      - '{{ sysctl_ipv4_forwarding.rc }} == 1'
+    msg: 'Remove net.ipv4.ip_forward override in sysctl configuration'
+
+- name: Remove immutable flag from resolver config
+  file:
+    path: /etc/resolv.conf
+    attributes: ''
+
+- name: get NetworkManager name of primary NIC
+  shell: 'set -o pipefail && nmcli -t -f DEVICE,CONNECTION dev | grep -w {{ ansible_default_ipv4.interface }} | cut -d: -f2'
+  check_mode: no
+  register: nmcliname_prim_nic
+  changed_when: false
+
+- name: get NetworkManager config of primary NIC
+  command: 'nmcli con show "{{ nmcliname_prim_nic.stdout }}"'
+  check_mode: no
+  register: nmclicon_prim_nic
+  changed_when: false
+
+- name: Fail if NetworkManager doesn't manage DNS of primary NIC
+  fail:
+    msg: NetworkManager is not managing DNS settings of primary NIC
+  when:
+    - nmclicon_prim_nic.stdout is search('ipv4.dns:\s+--')

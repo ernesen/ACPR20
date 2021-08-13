@@ -1,0 +1,52 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Extract constellation name
+  set_fact:
+    constellation_name: "{{ (acd_const_loc|basename).split('.')[0] }}"
+  when:
+    - acd_const_loc is defined
+    - acd_const_loc is not none
+
+- name: Print constellation name
+  debug:
+    msg: "Found constellation {{ constellation_name }}"
+
+- import_tasks: prerequisites.yml
+
+- block:
+    - import_tasks: get_constellation.yml
+
+    - import_tasks: get_installator.yml
+      when: (acd_inst_ver is defined and acd_inst_ver is not none) or (acd_inst_loc is defined and acd_inst_loc is not none)
+
+    - import_tasks: installator_version.yml
+      when:
+        - acd_installator_min_version is defined
+        - acd_installator_min_version is not none
+    - import_tasks: ose_login_token.yml
+    - import_tasks: privilege_verification.yml
+    - import_tasks: install.yml
+
+  always:
+    - import_tasks: cleanup.yml
+      when:
+        - wdir is defined
+        - acd_cleanup
+    - name: acpr logout
+      block:
+        - name: acpr logout
+          include_role:
+            name: avaloq.acpr-auth
+            tasks_from: logout.yml

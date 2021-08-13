@@ -1,0 +1,10 @@
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  annotations:
+    openshift.io/description: Sealed Secrets Controller
+    openshift.io/display-name: Sealed Secrets Controller
+  name: acpr-sealed-secrets
+spec:
+  finalizers:
+  - kubernetes

@@ -1,0 +1,596 @@
+apiVersion: avaloq/v1
+kind: AvaloqFiles
+spec:
+  parameters:
+  - name: alertmanager-configuration/alertmanager-configuration.yml
+    validation:
+      required: false
+      type: text
+    value: |
+      global:
+      route:
+        receiver: alert-email
+        group_by: []
+      receivers:
+        - name: alert-email
+          email_configs:
+            - to: to@example.com
+              from: from@example.com
+              smarthost: smtp.example.com:587
+              auth_username: 'user'
+              auth_password: 'password'
+  - name: alertmanager-configuration/htpasswd
+    validation:
+      required: false
+      type: text
+    value: |
+      # This file contains credentials used to login to Alertmanager
+---
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: OPENSHIFT_VERSION
+    validation:
+      required: true
+      type: number
+      range:
+        min: 3
+        max: 4
+    description: OpenShift version where this constellation is deployed to. Valid
+      values are 3 or 4.
+    value: 4
+  - name: OPENSHIFT_NAMESPACE
+    validation:
+      type: text
+      required: true
+    description: The namespace used on Openshift where this constellation is deployed
+      to.
+    value: acpr-monitoring
+  - name: AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY
+    validation:
+      type: text
+      required: false
+    value: registry.service.avaloq.com/
+    description: |
+      URL of the container image registry containing the Red Hat images. Must end with "/", unless you set it to null
+  - name: AVALOQ_CONTAINER_IMAGE_REGISTRY
+    validation:
+      required: false
+      type: text
+    value: registry.service.avaloq.com/
+    description: URL of the container image registry. Must end with "/", unless you
+      set it to null
+  - name: AVALOQ_ALERTMANAGER_DEPLOY_SECRET
+    validation:
+      type: text
+      required: true
+    value: true
+    description: Set to 'false' if you don't want to deploy secrets. It can be useful
+      when using Sealed Secrets
+  - name: AVALOQ_ALERTMANAGER_DEPLOY_PVC
+    validation:
+      type: text
+      required: true
+    value: true
+    description: Set to 'false' if you don't want to deploy PVCs
+  - name: AVALOQ_ALERTMANAGER_CONTAINER_IMAGE_PULL_POLICY
+    value: IfNotPresent
+    validation:
+      required: false
+      type: text
+      pattern: ^(IfNotPresent)|(Always)$
+    description: |
+      The pull policy to use for the container image. Valid values are `IfNotPresent` and `Always`, default is `IfNotPresent`.
+  - name: AVALOQ_ALERTMANAGER_SESSION_SECRET
+    validation:
+      type: text
+      required: true
+    description: Secret string used to encrypt sessions
+  - name: AVALOQ_ALERTMANAGER_SHOW_HTPASSWD_FORM
+    validation:
+      type: text
+      required: false
+    value: false
+    description: Show or hide htpasswd form in Alertmanager proxy
+  - name: AVALOQ_ALERTMANAGER_REPLICAS
+    validation:
+      type: number
+      required: false
+      range:
+        min: 0
+    value: 1
+    description: Number of replicas of Alertmanager deployment
+  - name: AVALOQ_ALERTMANAGER_NODE_SELECTOR_KEY
+    validation:
+      type: text
+      required: false
+    value: dummySelector
+    description: Specify a node where Alertmanager is deployed
+  - name: AVALOQ_ALERTMANAGER_NODE_SELECTOR_VALUE
+    validation:
+      type: text
+      required: false
+    value: true
+    description: Specify a node where Alertmanager is deployed
+  - name: AVALOQ_ALERTMANAGER_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: openshift3/prometheus-alertmanager:v3.11.465
+    descritpion: Container image of Alertmanager
+  - name: AVALOQ_ALERTMANAGER_PROXY_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: openshift3/oauth-proxy:v3.11.465
+    descritpion: Container image of Alertmanager proxy
+  - name: AVALOQ_ALERTMANAGER_ROUTE_HOSTNAME
+    validation:
+      type: text
+      required: false
+    value: null
+    description: |
+      Select a hostname to use to access Alertmanager. If empty, OpenShift generates the hostname automatically.
+  - name: AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 500m
+    descrption: Alertmanager CPU limit
+  - name: AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 200m
+    description: Alertmanager CPU request
+  - name: AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 256Mi
+    description: Alertmanager memory limit
+  - name: AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 256Mi
+    description: Alertmanager memory request
+  - name: AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 50m
+    descritpion: Alertmanager proxy CPU limit
+  - name: AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 10m
+    description: Alertmanager proxy CPU request
+  - name: AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 256Mi
+    description: Alertmanager proxy memory limit
+  - name: AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 256Mi
+    descritpion: Alertmanager proxy memory request
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: alertmanager-node-selector
+    when:
+      matching:
+        kind: Deployment
+        metadata.name: alertmanager
+      condition: params.getOrDefault('AVALOQ_ALERTMANAGER_NODE_SELECTOR_KEY', '')
+        == "dummySelector"
+    then:
+    - action: delete
+      path: spec.template.spec.nodeSelector
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: alertmanager-route
+    when:
+      matching:
+        kind: Route
+        metadata.name: alertmanager
+      condition: params.getOrDefault('AVALOQ_ALERTMANAGER_ROUTE_HOSTNAME', '').isEmpty()
+    then:
+    - action: delete
+      path: spec.host
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: alertmanager-resources
+    when:
+      matching:
+        kind: Deployment
+        metadata.name: alertmanager
+    then:
+    - action: apply
+      script: |
+        def processResource(containerName, kind, type) {
+          containers = $.spec.template.spec.containers;
+          for (int i = 0; i < containers.size(); i++) {
+            if (containers[i].name == containerName ) {
+              containers[i].resources[kind].remove(type);
+            }
+          }
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_CPU}' == '') {
+          processResource('alertmanager', 'limits', 'cpu');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_MEMORY}' == '') {
+          processResource('alertmanager', 'limits', 'memory');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_CPU}' == '') {
+          processResource('alertmanager', 'requests', 'cpu');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_MEMORY}' == '') {
+          processResource('alertmanager', 'requests', 'memory');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_CPU}' == '') {
+          processResource('alertmanager-proxy', 'limits', 'cpu');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_MEMORY}' == '') {
+          processResource('alertmanager-proxy', 'limits', 'memory');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_CPU}' == '') {
+          processResource('alertmanager-proxy', 'requests', 'cpu');
+        }
+
+        if ('${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_MEMORY}' == '') {
+          processResource('alertmanager-proxy', 'requests', 'memory');
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-secrets
+    when:
+      matching:
+        kind: Secret
+      condition: params.getOrDefault('AVALOQ_ALERTMANAGER_DEPLOY_SECRET', '') == false
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-pvcs
+    when:
+      matching:
+        kind: PersistentVolumeClaim
+      condition: params.getOrDefault('AVALOQ_ALERTMANAGER_DEPLOY_PVC', '') == false
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+kind: ConfigMap
+apiVersion: v1
+data:
+  auth: ${alertmanager-configuration/htpasswd}
+metadata:
+  name: alertmanager-htpasswd
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: monitoring
+    avaloq.com/app: alertmanager
+    avaloq.com/zone: core-internal
+  name: alertmanager
+spec:
+  replicas: ${AVALOQ_ALERTMANAGER_REPLICAS}
+  selector:
+    matchLabels:
+      avaloq.com/app: alertmanager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: monitoring
+        avaloq.com/app: alertmanager
+        avaloq.com/zone: core-internal
+      name: alertmanager
+    spec:
+      containers:
+      - image: ${AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY}${AVALOQ_ALERTMANAGER_CONTAINER_IMAGE}
+        imagePullPolicy: ${AVALOQ_ALERTMANAGER_CONTAINER_IMAGE_PULL_POLICY}
+        name: alertmanager
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: direct
+        args:
+        - --config.file=/etc/alertmanager/alertmanager.yml
+        - --cluster.listen-address=:9094
+        - --cluster.peer=alertmanager-cluster:9094
+        ports:
+        - containerPort: 9093
+          name: direct
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_ALERTMANAGER_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_ALERTMANAGER_RESOURCES_REQUEST_MEMORY}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/alertmanager
+          name: alertmanager-configuration
+        - mountPath: /alertmanager
+          name: alertmanager-data
+      - args:
+        - -provider=openshift
+        - -https-address=:8443
+        - -http-address=
+        - -email-domain=*
+        - -upstream=http://localhost:9093
+        - -openshift-service-account=alertmanager
+        - -openshift-ca=/etc/pki/tls/cert.pem
+        - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        - '-openshift-sar={"namespace":"${OPENSHIFT_NAMESPACE}", "resource":"services",
+          "name":"alerts", "verb": "get"}'
+        - -tls-cert=/etc/tls/private/tls.crt
+        - -tls-key=/etc/tls/private/tls.key
+        - -client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+        - -cookie-secret-file=/etc/proxy/secrets/session_secret
+        - -cookie-expire=4h
+        - -skip-auth-regex=^/-/healthy
+        - '-display-htpasswd-form=${AVALOQ_ALERTMANAGER_SHOW_HTPASSWD_FORM}'
+        - -htpasswd-file=/etc/proxy/htpasswd/auth
+        image: ${AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY}${AVALOQ_ALERTMANAGER_PROXY_CONTAINER_IMAGE}
+        imagePullPolicy: ${AVALOQ_ALERTMANAGER_CONTAINER_IMAGE_PULL_POLICY}
+        name: alertmanager-proxy
+        ports:
+        - containerPort: 8443
+          name: proxy
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_ALERTMANAGER_PROXY_RESOURCES_REQUEST_MEMORY}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/tls/private
+          name: alertmanager-tls
+        - mountPath: /etc/proxy/secrets
+          name: alertmanager-session-secret
+        - mountPath: /etc/proxy/htpasswd
+          name: alertmanager-htpasswd
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: alertmanager
+      serviceAccountName: alertmanager
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        ${AVALOQ_ALERTMANAGER_NODE_SELECTOR_KEY}: '${AVALOQ_ALERTMANAGER_NODE_SELECTOR_VALUE}'
+      volumes:
+      - name: alertmanager-configuration
+        secret:
+          defaultMode: 420
+          secretName: alertmanager-configuration
+      - name: alertmanager-session-secret
+        secret:
+          defaultMode: 420
+          secretName: alertmanager-session-secret
+      - name: alertmanager-tls
+        secret:
+          defaultMode: 420
+          secretName: alertmanager-tls
+      - name: alertmanager-htpasswd
+        configMap:
+          defaultMode: 420
+          name: alertmanager-htpasswd
+      - emptyDir: {}
+        name: alertmanager-data
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alertmanager-cluster
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9094
+      protocol: TCP
+    from:
+    - podSelector:
+        matchLabels:
+          avaloq.com/app: alertmanager
+  podSelector:
+    matchLabels:
+      avaloq.com/app: alertmanager
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: alertmanager-route
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 8443
+      protocol: TCP
+    from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: ingress
+  podSelector:
+    matchLabels:
+      avaloq.com/app: alertmanager
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-alertmanager
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9093
+      protocol: TCP
+    from:
+    - podSelector:
+        matchLabels:
+          avaloq.com/app: prometheus
+  podSelector:
+    matchLabels:
+      avaloq.com/app: alertmanager
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: alertmanager
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+spec:
+  host: ${AVALOQ_ALERTMANAGER_ROUTE_HOSTNAME}
+  port:
+    targetPort: alertmanager-proxy
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: reencrypt
+  to:
+    kind: Service
+    name: alertmanager-proxy
+    weight: 100
+  wildcardPolicy: None
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  alertmanager.yml: ${alertmanager-configuration/alertmanager-configuration.yml}
+metadata:
+  name: alertmanager-configuration
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  session_secret: ${AVALOQ_ALERTMANAGER_SESSION_SECRET}
+metadata:
+  name: alertmanager-session-secret
+  labels:
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+  name: alertmanager-cluster
+spec:
+  ports:
+  - name: alertmanager-cluster
+    port: 9094
+    protocol: TCP
+    targetPort: 9094
+  selector:
+    avaloq.com/app: alertmanager
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+  name: alertmanager-direct
+spec:
+  ports:
+  - name: alertmanager-direct
+    port: 9093
+    protocol: TCP
+    targetPort: 9093
+  selector:
+    avaloq.com/app: alertmanager
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    avaloq.com/app: alertmanager
+    app.kubernetes.io/component: monitoring
+  name: alertmanager-proxy
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: alertmanager-tls
+spec:
+  ports:
+  - name: alertmanager-proxy
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    avaloq.com/app: alertmanager
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager
+  labels:
+    app.kubernetes.io/component: monitoring
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.alertmanager: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"alertmanager"}}'

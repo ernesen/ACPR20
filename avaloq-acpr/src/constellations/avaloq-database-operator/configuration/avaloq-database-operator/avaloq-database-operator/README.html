@@ -1,0 +1,96 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_NAMESPACE</td>
+<td>The namespace used on Openshift where this constellation is deployed to.</td>
+<td>true</td>
+<td>acpr-database-operator</td>
+</tr>
+<tr>
+<td>AVALOQ_CONTAINER_IMAGE_REGISTRY</td>
+<td>URL of the container image registry. Must end with &quot;/&quot;, unless you set it to null</td>
+<td>true</td>
+<td>registry.service.avaloq.com/</td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_CONTAINER_IMAGE</td>
+<td>Container image name and version. Example: <code>avaloq/avaloq-database-operator:0.7.1</code></td>
+<td>false</td>
+<td>avaloq/avaloq-database-operator:0.7.1</td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_LOGACCESS_GROUPNAME</td>
+<td>User group which will get access to database operator logs Example: <code>database-operators</code></td>
+<td>false</td>
+<td>system:authenticated</td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_ENV</td>
+<td>Comma separated list of container environment variables to inject Example: <code>DB_OPERATOR_DROP_SCHEMA_ON_DELETE:false,SPRING_PROFILES_ACTIVE:readonly</code></td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_RESOURCES_REQUEST_CPU</td>
+<td>The cpu requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>5m</td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_RESOURCES_REQUEST_MEMORY</td>
+<td>The memory requests of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_RESOURCES_LIMIT_CPU</td>
+<td>The cpu limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>2</td>
+</tr>
+<tr>
+<td>AVALOQ_DATABASE_OPERATOR_RESOURCES_LIMIT_MEMORY</td>
+<td>The memory limit of the application. For more information of possible values, please check out the following page. https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</td>
+<td>false</td>
+<td>512Mi</td>
+</tr>
+</tbody>
+</table>
+<h1>AvaloqFolders</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>oracle-templates</td>
+<td>oracle-templates</td>
+<td>oracle templates configmap<br><br>All files in this folder will be converted as ConfigMap.<br>Files *.template are included.</td>
+</tr>
+</tbody>
+</table>

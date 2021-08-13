@@ -1,0 +1,87 @@
+---
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: project-request
+  labels:
+    app.kubernetes.io/managed-by: avaloq-acpr
+objects:
+- apiVersion: project.openshift.io/v1
+  kind: Project
+  metadata:
+    annotations:
+      openshift.io/description: ${PROJECT_DESCRIPTION}
+      openshift.io/display-name: ${PROJECT_DISPLAYNAME}
+      openshift.io/requester: ${PROJECT_REQUESTING_USER}
+{% if acpr_projecttemplate.labels is defined %}
+    labels:
+      app.kubernetes.io/managed-by: avaloq-acpr
+{{ acpr_projecttemplate.labels|to_nice_yaml|indent(width=6, indentfirst=True) }}
+{% endif %}
+    name: ${PROJECT_NAME}
+  spec: {}
+  status: {}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      app.kubernetes.io/managed-by: avaloq-acpr
+    name: admin
+    namespace: ${PROJECT_NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: admin
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: ${PROJECT_ADMIN_USER}
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: default-deny-all
+    namespace: ${PROJECT_NAME}
+    labels:
+      app.kubernetes.io/managed-by: avaloq-acpr
+  spec:
+    podSelector: {}
+    ingress: []
+{% if acpr_projecttemplate.networkpolicy is defined %}
+{{ acpr_projecttemplate.networkpolicy|to_nice_yaml -}}
+{% endif %}
+{% if acpr_projecttemplate.resourcequota is defined %}
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-resources
+    namespace: ${PROJECT_NAME}
+    labels:
+      app.kubernetes.io/managed-by: avaloq-acpr
+  spec:
+    hard:
+{{ acpr_projecttemplate.resourcequota|to_nice_yaml|indent(width=6, indentfirst=True) }}
+{% endif %}
+{% if acpr_projecttemplate.limitrange is defined %}
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: core-resource-limits
+    namespace: ${PROJECT_NAME}
+    labels:
+      app.kubernetes.io/managed-by: avaloq-acpr
+  spec:
+    limits:
+{{ acpr_projecttemplate.limitrange|to_nice_yaml|indent(width=6, indentfirst=True) }}
+{% endif %}
+{% if acpr_projecttemplate.serviceaccount is defined %}
+{{ acpr_projecttemplate.serviceaccount|to_nice_yaml -}}
+{% endif %}
+{% if acpr_projecttemplate.rolebinding is defined %}
+{{ acpr_projecttemplate.rolebinding|to_nice_yaml -}}
+{% endif %}
+parameters:
+- name: PROJECT_NAME
+- name: PROJECT_DISPLAYNAME
+- name: PROJECT_DESCRIPTION
+- name: PROJECT_ADMIN_USER
+- name: PROJECT_REQUESTING_USER

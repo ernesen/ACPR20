@@ -1,0 +1,52 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Check if Avaloq's CA certificate is required
+  set_fact:
+    cust_registry_cacert: "{{ acpr_registry_default_cacert }}"
+  when: cust_registry_location is search('service\.avaloq\.com')
+
+- name: include detection of all-in-one config
+  include_tasks: detect-all-in-one-config.yml
+
+- name: Set cust_master_identity_providers
+  set_fact:
+    cust_master_identity_providers: "{{ cust_master_identity_providers }}"
+  no_log: true
+  when:
+    - cust_master_identity_providers is defined
+
+- name: Fail if unsupported master auth provider is selected
+  fail:
+    msg: "Please configure different kind for {{ item.name }} master auth provider. {{ item.kind }} is not supported by ACPR."
+  when:
+    - "cust_master_identity_providers is defined"
+    - "item.kind not in avq_supported_auth_providers"
+  loop: "{{ cust_master_identity_providers }}"
+  no_log: true
+
+- name: Generate initial admin user
+  block:
+  - name: include htpasswd configuration
+    include_tasks: generate-htpasswd.yml
+
+  - name: Print password hint
+    debug:
+      msg: 'Initial credentials are stored in `{{ avq_acpr_home + cust_os_cluster_name }}-htpasswd-plain`'
+  when:
+    - cust_master_identity_providers is not defined
+    - cust_master_htpasswd_file is not defined
+
+- name: include inventory generator
+  include_tasks: generate-inventory.yml

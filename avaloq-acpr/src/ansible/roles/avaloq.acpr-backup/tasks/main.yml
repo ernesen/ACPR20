@@ -1,0 +1,70 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Prepare local system
+  block:
+    - name: Generate UTC timestamp
+      set_fact:
+        timestamp: '{{ lookup("pipe", "date -u +%Y%m%dT%H%MZ") }}'
+
+    - name: Generate local temporary directory names
+      set_fact:
+        _backup_dir: '{{ backup_dir + timestamp }}/'
+
+    - name: Create backup directory
+      file:
+        path: '{{ _backup_dir }}'
+        state: directory
+        recurse: true
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Generate remote temporary directory names
+  set_fact:
+    _temp_backup_dir: '{{ temp_backup_dir + timestamp }}'
+
+- name: Backup etcd configuration and data
+  script: 'files/backup_etcd.sh {{ _temp_backup_dir }}'
+  when: inventory_hostname in groups['etcd']
+
+- name: Backup OpenShift configuration
+  script: 'files/backup_master_node_v{{ ose_version }}.sh {{ _temp_backup_dir }}'
+
+- name: Include Sealed secrets Backup
+  import_tasks: sealed_secrets.yml
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Compress backup
+  archive:
+    path:
+      - '{{ _temp_backup_dir }}'
+    dest: '{{ _temp_backup_dir }}.tgz'
+    format: gz
+
+- name: Assure rsync installed in the system
+  yum:
+    name: rsync
+    state: present
+
+- name: Fetch backup archives
+  synchronize:
+    src: '{{ _temp_backup_dir }}.tgz'
+    dest: '{{ _backup_dir }}'
+    mode: pull
+
+- name: Include clean up tasks
+  include_tasks: cleanup.yml

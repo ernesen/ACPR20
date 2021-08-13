@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: avaloq-sealed-secrets
+    app.kubernetes.io/part-of: avaloq-sealed-secrets
+    name: sealed-secrets-controller
+    avaloq.com/zone: core-internal
+  name: sealed-secrets-controller
+  namespace: acpr-sealed-secrets
+spec:
+  minReadySeconds: 30
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: avaloq-sealed-secrets
+      app.kubernetes.io/part-of: avaloq-sealed-secrets
+      name: sealed-secrets-controller
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: avaloq-sealed-secrets
+        app.kubernetes.io/part-of: avaloq-sealed-secrets
+        name: sealed-secrets-controller
+    spec:
+      containers:
+        - image: "{{ acpr_sealed_secrets_operator['image'] }}"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          name: sealed-secrets-controller
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          stdin: false
+          tty: false
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+          resources:
+            limits:
+              cpu: 1
+              memory: 512Mi
+            requests:
+              cpu: 5m
+              memory: 512Mi
+      serviceAccountName: sealed-secrets-controller
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: tmp

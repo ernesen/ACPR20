@@ -1,0 +1,105 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_CHUNKLIMITSIZE</td>
+<td>Fluentd buffer chunkLimitSize For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>8m</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_TOTALLIMITSIZE</td>
+<td>Fluentd buffer totalLimitSize For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>8G</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_FLUSHINTERVAL</td>
+<td>Fluentd buffer flushInterval For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>1s</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_FLUSHMODE</td>
+<td>Fluentd buffer flushMode For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>interval</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_FLUSHTHREADCOUNT</td>
+<td>Fluentd buffer flushThreadCount For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>2</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_OVERFLOWACTION</td>
+<td>Fluentd buffer overflowAction For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>block</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_RETRYMAXINTERVAL</td>
+<td>Fluentd buffer retryMaxInterval For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>300s</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_RETRYTYPE</td>
+<td>Fluentd buffer retryType For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>exponential_backoff</td>
+</tr>
+<tr>
+<td>OPENSHIFT_LOGGING_FLUENTD_BUFFER_RETRYWAIT</td>
+<td>Fluentd buffer retryWait For more information see https://docs.openshift.com/container-platform/4.6/logging/config/cluster-logging-collector.html</td>
+<td>false</td>
+<td>1s</td>
+</tr>
+</tbody>
+</table>
+<h1>AvaloqFiles</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fluent.conf</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq.openshift/openshift-logging-fluentd/fluent.conf">fluent.conf</a></td>
+</tr>
+<tr>
+<td>run.sh</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq.openshift/openshift-logging-fluentd/run.sh">run.sh</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> The default values for AvaloqFiles (if any) are present after running the <code>fetch</code> command.</p>

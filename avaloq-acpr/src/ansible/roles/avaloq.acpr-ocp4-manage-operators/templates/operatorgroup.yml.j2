@@ -1,0 +1,11 @@
+
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  app.kubernetes.io/managed-by: avaloq-acpr
+  name: {{ item.namespace }}-{{ item.name }}
+  namespace: {{ item.namespace }}
+spec:
+  targetNamespaces:
+  - {{ item.namespace }}

@@ -1,0 +1,199 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [4]
+
+- name: Verify user in 'acpr_cluster_credentials' variable has required type
+  import_playbook: helper_playbooks/cluster_credentials.yml
+  vars:
+    cluster_credentials_required_type: 'cluster-admin-user'
+  when: acpr_cluster_credentials is defined
+
+- name: ACPR | Set OpenShift logging to Unmanaged mode
+  hosts: localhost
+  become: false
+  module_defaults:
+    group/k8s:
+      host: "{{ acpr_cluster_credentials[0]['url'] | default('https://api.{{ os_cluster_name }}:6443') }}"
+      ca_cert: "{{ acpr_cluster_credentials[0]['certificateAuthorityPath'] | default(ca_certificate.path) | default('') }}"
+      validate_certs: "{{ 'no' if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default('no' if acpr_cluster_credentials is undefined) | default(False) else 'yes' }}"
+  tasks:
+    - block:
+        - name: acpr login
+          import_role:
+            name: avaloq.acpr-ocp4-auth
+            tasks_from: login.yml
+
+        - name: Wait until operator initialize fluentd DaemonSet
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: DaemonSet
+            name: fluentd
+            namespace: openshift-logging
+          until: fluentd.resources | default([]) | length > 0
+          retries: 120
+          delay: 10
+          register: fluentd
+
+        - name: Wait until operator initialize kibana Deployment
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: Deployment
+            name: kibana
+            namespace: openshift-logging
+          until: kibana.resources | default([]) | length > 0
+          retries: 120
+          delay: 10
+          register: kibana
+
+        - name: Wait until operator initialize elasticsearch Deployments
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: Deployment
+            namespace: openshift-logging
+            label_selectors:
+              - component = elasticsearch
+          until: elasticsearch.resources | default([]) | length > 0
+          retries: 120
+          delay: 10
+          register: elasticsearch
+
+        - name: Set OpenShift logging to Unmanaged
+          k8s:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: logging.openshift.io/v1
+            kind: ClusterLogging
+            namespace: openshift-logging
+            name: instance
+            state: present
+            merge_type: merge
+            wait: yes
+            definition:
+              spec:
+                managementState: Unmanaged
+
+        - name: Set variable 'MERGE_JSON_LOG' in fluentd DaemonSet to true
+          k8s:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: apps/v1
+            kind: DaemonSet
+            namespace: openshift-logging
+            name: fluentd
+            state: present
+            merge_type: json
+            definition:
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - env:
+                          - name: MERGE_JSON_LOG
+                            value: "true"
+                        name: fluentd
+
+      always:
+        - name: acpr logout
+          import_role:
+            name: avaloq.acpr-ocp4-auth
+            tasks_from: logout.yml
+
+    - block:
+        - name: Generate kubeconf path
+          set_fact:
+            KUBECONFIG: '/tmp/acpr-kube-{{ 10000000|random }}/config'
+        - name: Create kubedir
+          file:
+            path: '{{ KUBECONFIG|dirname }}'
+            mode: 0700
+            state: directory
+
+        - name: Deploy 'openshift-logging-fluentd' constellation
+          import_role:
+            name: avaloq.constellation-deployment
+          vars:
+            acd_namespace: 'openshift-logging'
+            acd_image_existence: False
+            acd_inst_lint: False
+            acd_const_loc: "{{ acpr_constellations_path | default( playbook_dir + '/../../constellations') }}/openshift-logging-fluentd"
+            acd_inst_params: '--ignore-unspecified-objects'
+
+        - name: Convert variable 'constellation_commands_cluster_admin' to string
+          no_log: true
+          set_fact:
+            constellation_commands_cluster_admin: "{{ constellation_commands_cluster_admin | string }}"
+
+        - name: Define 'fluentd_restart_required' variable
+          no_log: true
+          set_fact:
+            fluentd_restart_required: [ ]
+
+        - name: Check if fluentd restart is required
+          no_log: true
+          set_fact:
+            fluentd_restart_required: "{{ fluentd_restart_required + [ 'true' ] }}"
+          when: item in constellation_commands_cluster_admin
+          loop:
+            - fluentd.yml
+      always:
+          - name: Cleanup kubedir
+            file:
+              path: '{{ KUBECONFIG|dirname }}'
+              state: absent
+
+    - block:
+        - name: acpr login
+          import_role:
+            name: avaloq.acpr-ocp4-auth
+            tasks_from: login.yml
+
+        - name: Get all fluentd pods
+          k8s_info:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: v1
+            kind: Pod
+            namespace: openshift-logging
+            label_selectors:
+              - component = fluentd
+          register: fluentd_pods
+
+        - name: Restart all fluentd pods
+          k8s:
+            api_key: "{{ api_key }}"
+            kubeconfig: "{{ authfile | default(omit) }}"
+            api_version: v1
+            kind: Pod
+            name: "{{ item.metadata.name }}"
+            namespace: openshift-logging
+            state: absent
+          loop: "{{ fluentd_pods.resources }}"
+
+      when: fluentd_restart_required | length > 0
+      always:
+        - name: acpr logout
+          import_role:
+            name: avaloq.acpr-ocp4-auth
+            tasks_from: logout.yml

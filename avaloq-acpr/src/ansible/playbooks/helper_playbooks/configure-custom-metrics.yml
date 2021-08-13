@@ -1,0 +1,40 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: ACPR | custom metrics configuration
+  hosts: nodes:!masters, new_nodes
+  become: true
+  gather_facts: true
+  tasks:
+    - block:
+        - name: Install required SELinux support packages
+          yum:
+            name: policycoreutils-python
+            state: present
+
+        - include_vars: "{{ playbook_dir }}/../../roles/avaloq.acpr-monitoring/vars/main.yml"
+
+        - name: Set SELinux filecontext of custom metrics folder
+          sefcontext:
+            target: "{{ acpr_prometheus_node_exporter_custom_metrics_folder }}(/.*)?"
+            setype: container_file_t
+
+        - name: Apply SELinux filecontext on custom metrics folder
+          command: "restorecon -irv {{ acpr_prometheus_node_exporter_custom_metrics_folder }}"
+      when:
+        - ansible_selinux is defined
+        - ansible_selinux.status == "enabled"
+    - include_role:
+        name: avaloq.acpr-monitoring
+        tasks_from: cronjob

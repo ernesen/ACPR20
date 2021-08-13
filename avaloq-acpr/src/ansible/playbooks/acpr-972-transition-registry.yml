@@ -1,0 +1,93 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: Verify user in 'acpr_cluster_credentials' variable has required type
+  import_playbook: helper_playbooks/cluster_credentials.yml
+  vars:
+    cluster_credentials_required_type: 'cluster-admin-user'
+  when: acpr_cluster_credentials is defined
+
+- name: ACPR | Update docker configuration
+  hosts: nodes
+  any_errors_fatal: true
+  become: true
+  serial: 1
+  tasks:
+    - name: docker reconfiguration
+      include_role:
+        name: avaloq.acpr-docker
+      vars:
+        acpr_reconfigure_docker_interactive_mode: false
+
+- name: ACPR | Transition registry
+  hosts: localhost
+  become: false
+  pre_tasks:
+    - name: Generate kubeconf path
+      set_fact:
+        KUBECONFIG: '/tmp/acpr-kube-{{ 10000000|random }}/config'
+    - name: Create kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        mode: 0700
+        state: directory
+  post_tasks:
+    - name: Cleanup kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        state: absent
+  tasks:
+    - name: verify that registry variables are defined
+      assert:
+        that:
+          - old_registry is defined
+          - new_registry is defined
+        msg: 'You must provide `old_registry` and `new_registry`'
+
+    - name: Install acpr transition package
+      yum:
+        name: acpr-migrate
+        state: latest
+      become: true
+
+    - block:
+      - name: acpr login
+        include_role:
+          name: avaloq.acpr-auth
+          tasks_from: login.yml
+
+      - name: run registry transition
+        command: '/usr/local/bin/acpr-migrate adm migrate image-references {{ old_registry }}/*={{ new_registry }}/*  --include=deploymentconfigs,deployments,daemonsets,statefulsets,cronjob  --confirm'
+        register: oc_migration
+        changed_when: '"migrated=0" not in oc_migration.stdout'
+        failed_when: '"errors=0" not in oc_migration.stdout'
+        environment:
+          KUBECONFIG: '{{ KUBECONFIG }}'
+
+      - name: show migration output
+        debug:
+          var: oc_migration.stdout
+
+      always:
+      - name: acpr logout
+        include_role:
+          name: avaloq.acpr-auth
+          tasks_from: logout.yml
+
+

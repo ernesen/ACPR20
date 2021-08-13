@@ -1,0 +1,31 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+#
+# The template file used to define persistent volumes is specific
+# to the backend of the persistent volume.
+#
+# For each such file system, defined by the variable pv_backend_type,
+# that is provided for each item in the hash acpr_pv_definitions, there
+# is a corresponding template file pv_{{item.pv_backend_type}}.yml.j2.
+#
+- name: >
+    Create {{ item.pv_count }} PV specifications for {{ item.pv_backend_type }} backend,
+    size {{ item.pv_size }}, access mode {{ pv_access_mode_abbrev[item.pv_access_mode] }}
+  template:
+    src: templates/pv_{{ item.pv_backend_type | lower }}.yml.j2
+    dest: "{{ pv_def_directory }}/pv-{{ item.pv_backend_type | lower }}-{{ idx }}-{{ pv_access_mode_abbrev[item.pv_access_mode] | lower }}-{{ item.pv_size | lower }}.yml"
+  loop: "{{ range(1, item.pv_count+1) | list }}"
+  loop_control:
+    loop_var: idx

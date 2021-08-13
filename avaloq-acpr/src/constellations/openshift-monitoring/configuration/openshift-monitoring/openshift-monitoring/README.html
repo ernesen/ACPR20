@@ -1,0 +1,87 @@
+<head><style>table {
+  border-collapse: collapse;
+}
+td, th {
+  border: 2px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+thead {
+  background: #dddddd;
+}
+</style></head>
+<h1>AvaloqParameters</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AVALOQ_OPENSHIFT_MONITORING_PROMETHEUS_USERNAME</td>
+<td>Username of internal user</td>
+<td>true</td>
+<td>internal</td>
+</tr>
+<tr>
+<td>AVALOQ_OPENSHIFT_MONITORING_PROMETHEUS_PASSWORD</td>
+<td>Password of internal user</td>
+<td>true</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h1>AvaloqFiles</h1>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Required</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prometheus-k8s-htpasswd.yaml</td>
+<td></td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td>thanos-querier-oauth-htpasswd.yaml</td>
+<td></td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td>config.yaml</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/openshift-monitoring/config.yaml">config.yaml</a></td>
+</tr>
+<tr>
+<td>alertmanager.yaml</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/openshift-monitoring/alertmanager.yaml">alertmanager.yaml</a></td>
+</tr>
+<tr>
+<td>datasources.yaml</td>
+<td></td>
+<td>false</td>
+<td><a href="../../../output/definitions/com.avaloq/openshift-monitoring/datasources.yaml">datasources.yaml</a></td>
+</tr>
+<tr>
+<td>prometheus.yaml</td>
+<td></td>
+<td>false</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> The default values for AvaloqFiles (if any) are present after running the <code>fetch</code> command.</p>

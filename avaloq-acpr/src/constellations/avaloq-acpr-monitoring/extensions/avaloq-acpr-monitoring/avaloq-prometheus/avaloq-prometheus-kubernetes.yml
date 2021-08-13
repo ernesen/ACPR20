@@ -1,0 +1,1851 @@
+apiVersion: avaloq/v1
+kind: AvaloqFiles
+spec:
+  parameters:
+  - name: prometheus-configuration/prometheus-configuration.yml
+    validation:
+      required: false
+      type: text
+  - name: prometheus-configuration/prometheus-configuration-ocp4.yml
+    validation:
+      required: false
+      type: text
+  - name: prometheus-configuration/htpasswd
+    validation:
+      required: false
+      type: text
+    value: ''
+  - name: etcd-certificates/etcd-ca-certificate
+    validation:
+      required: false
+      type: text
+  - name: etcd-certificates/etcd-certificate
+    validation:
+      required: false
+      type: text
+  - name: etcd-certificates/etcd-key
+    validation:
+      required: false
+      type: text
+---
+apiVersion: avaloq/v1
+kind: AvaloqParameters
+spec:
+  parameters:
+  - name: OPENSHIFT_VERSION
+    validation:
+      required: true
+      type: number
+      range:
+        min: 3
+        max: 4
+    description: OpenShift version where this constellation is deployed to. Valid
+      values are 3 or 4.
+    value: 4
+  - name: OPENSHIFT_NAMESPACE
+    validation:
+      type: text
+      required: true
+    description: The namespace used on Openshift where this constellation is deployed
+      to.
+    value: acpr-monitoring
+  - name: AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY
+    validation:
+      type: text
+      required: false
+    value: registry.service.avaloq.com/
+    description: |
+      URL of the container image registry containing the Red Hat images. Must end with "/", unless you set it to null
+  - name: AVALOQ_CONTAINER_IMAGE_REGISTRY
+    validation:
+      required: false
+      type: text
+    value: registry.service.avaloq.com/
+    description: URL of the container image registry. Must end with "/", unless you
+      set it to null
+  - name: AVALOQ_PROMETHEUS_DEPLOY_SECRET
+    validation:
+      type: text
+      required: true
+    value: true
+    description: Set to 'false' if you don't want to deploy secrets. It can be useful
+      when using Sealed Secrets
+  - name: AVALOQ_PROMETHEUS_DEPLOY_PVC
+    validation:
+      type: text
+      required: true
+    value: true
+    description: Set to 'false' if you don't want to deploy PVCs
+  - name: AVALOQ_PROMETHEUS_ALERTS
+    validation:
+      type: text
+      required: true
+    value: true
+    description: Enables or disable deploy of Prometheus alerts
+  - name: AVALOQ_PROMETHEUS_SESSION_SECRET
+    validation:
+      type: text
+      required: true
+    description: Secret string used to encrypt sessions
+  - name: AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_ROUTE
+    validation:
+      type: text
+      required: false
+    value: acpr-monitoring
+    description: Route to Prometheus in 'openshift-monitorng' namespace
+  - name: AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_PASSWORD
+    validation:
+      type: text
+      required: false
+    value: acpr-monitoring
+    description: Password of user used to login to Prometheus in 'openshift-monitorng'
+      namespace
+  - name: AVALOQ_PROMETHEUS_OPENSHIFT_MONITORING_USERNAME
+    validation:
+      type: text
+      required: false
+    description: Username of user used to login to Prometheus in 'openshift-monitorng'
+      namespace
+  - name: AVALOQ_PROMETHEUS_CONTAINER_IMAGE_PULL_POLICY
+    value: IfNotPresent
+    validation:
+      required: false
+      type: text
+      pattern: ^(IfNotPresent)|(Always)$
+    description: |
+      The pull policy to use for the container image. Valid values are `IfNotPresent` and `Always`, default is `IfNotPresent`.
+  - name: AVALOQ_PROMETHEUS_CLUSTER_NAME
+    validation:
+      type: text
+      required: false
+    description: This variable is used if multiple Prometheus instances are federated
+  - name: AVALOQ_PROMETHEUS_ETCD_NODES
+    validation:
+      type: text
+      required: false
+    description: |
+      List of all etcd nodes within the cluster
+  - name: AVALOQ_PROMETHEUS_ROUTE_HOSTNAME
+    validation:
+      type: text
+      required: false
+    value: null
+    description: |
+      Select a hostname to use to access Prometheus. If empty, OpenShift generates the hostname automatically
+  - name: AVALOQ_PROMETHEUS_SHOW_HTPASSWD_FORM
+    validation:
+      type: text
+      required: false
+    value: false
+    description: |
+      Show or hide htpasswd form in Promethues oAuth proxy
+  - name: AVALOQ_PROMETHEUS_REPLICAS
+    validation:
+      type: number
+      required: false
+      range:
+        min: 0
+    value: 1
+    description: |
+      Number of replicas of Prometheus
+  - name: AVALOQ_PROMETHEUS_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: openshift3/prometheus:v3.11.465
+    descritpion: |
+      Container image of Prometheus
+  - name: AVALOQ_PROMETHEUS_PROXY_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: openshift3/oauth-proxy:v3.11.465
+    descritpion: |
+      Container image of Prometheus proxy
+  - name: AVALOQ_PROMETHEUS_PODANTIAFFINITY_TOPOLOGY_KEY
+    validation:
+      type: text
+      required: false
+    description: Prometheus pod antiaffinity topology key
+  - name: AVALOQ_PROMETHEUS_DATABASE_RETENTION_TIME
+    validation:
+      type: text
+      required: false
+    value: 14d
+    description: The length of time Prometheus will keep individual metrics
+  - name: AVALOQ_PROMETHEUS_NODE_SELECTOR_KEY
+    validation:
+      type: text
+      required: false
+    value: dummySelector
+    descritpion: Specify a node where Prometheus is deployed
+  - name: AVALOQ_PROMETHEUS_NODE_SELECTOR_VALUE
+    validation:
+      type: text
+      required: false
+    value: true
+    descritpion: Specify a node where Prometheus is deployed
+  - name: AVALOQ_PROMETHEUS_VOLUME_HOSTPATH_DATA
+    validation:
+      type: text
+      required: false
+    description: Prometheus hostpath for data
+  - name: AVALOQ_PROMETHEUS_PVC_STORAGE_REQUEST_DATA
+    validation:
+      type: text
+      required: false
+    value: 1Gi
+    description: Prometheus storage request for storing its database
+  - name: AVALOQ_PROMETHEUS_PVC_STORAGE_CLASSNAME_DATA
+    validation:
+      type: text
+      required: false
+    description: Prometheus PersitentVolumeClaim data storage class name
+  - name: AVALOQ_PROMETHEUS_PVC_STORAGE_ACCESSMODE_DATA
+    validation:
+      type: text
+      required: false
+    value: ReadWriteOnce
+    description: Prometheus PersitentVolumeClaim data storage access mode
+  - name: AVALOQ_PROMETHEUS_SECURITYCONTEXT_PRIVILEGED
+    validation:
+      type: text
+      required: false
+    value: false
+    descritpion: Run Prometheus pods as privileged
+  - name: AVALOQ_PROMETHEUS_SECURITYCONTEXT_RUNASUSER
+    validation:
+      type: number
+      required: false
+      range:
+        min: 1000
+    value: null
+    description: Prometheus prviledged user id
+  - name: AVALOQ_PROMETHEUS_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 2000m
+    description: Prometheus CPU limit
+  - name: AVALOQ_PROMETHEUS_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 500m
+    description: Prometheus CPU request
+  - name: AVALOQ_PROMETHEUS_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 2048Mi
+    description: Prometheus memory limit
+  - name: AVALOQ_PROMETHEUS_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 2048Mi
+    description: Prometheus memory request
+  - name: AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 50m
+    description: Prometheus Node exporter CPU limit
+  - name: AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 10m
+    description: Prometheus Node exporter CPU request
+  - name: AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 256Mi
+    description: Prometheus Node exporter memory limit
+  - name: AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 256Mi
+    description: Prometheus Node exporter memory request
+  - name: AVALOQ_PROMETHEUS_NODE_EXPORTER_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: openshift3/prometheus-node-exporter:v3.11.465
+    description: Container image of Prometheus Node exporter
+  - name: AVALOQ_PROMETHEUS_NODE_EXPORTER_PORT
+    validation:
+      type: number
+      required: false
+      range:
+        min: 1024
+    value: 9100
+    descritpion: Port Prometheus Node exporter listens to
+  - name: AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 100m
+    descritpion: Prometheus Rule Provisioner CPU request
+  - name: AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 64Mi
+    descritpion: Prometheus Rule Provisioner memory limit
+  - name: AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 32Mi
+    descritpion: Prometheus Rule Provisioner memory request
+  - name: AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 200m
+    descritpion: Prometheus Rule Provisioner CPU limit
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_CONTAINER_IMAGE
+    validation:
+      type: text
+      required: false
+    value: avaloq/avaloq-prometheus-rule-provisioner:0.2.4
+    description: Container image of Prometheus Rule Provisioner
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_USERNAME
+    validation:
+      type: text
+      required: false
+    value: null
+    description: Username used by Prometheus Rule Provisioner to access Prometheus
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_PASSWORD
+    validation:
+      type: text
+      required: false
+    value: null
+    description: Password used by Prometheus Rule Provisioner to access Prometheus
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_CERT_PATH
+    validation:
+      type: text
+      required: false
+    value: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+    description: Path to certificate used by Prometheus Rule Provisioner to serve
+      encrypted connections
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_REPLICAS
+    validation:
+      type: number
+      required: false
+      range:
+        min: 0
+    value: 1
+    description: Number of replicas of Prometheus Rule Provisioner
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_NODE_SELECTOR_VALUE
+    validation:
+      type: text
+      required: false
+    value: true
+    description: Specify a node where Prometheus Rule Provisioner is deployed
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_SECURITYCONTEXT_PRIVILEGED
+    validation:
+      type: text
+      required: false
+    value: false
+    description: Run Prometheus Rule Provisioner as privileged pods
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_SECURITYCONTEXT_RUNASUSER
+    validation:
+      type: number
+      required: false
+      range:
+        min: 1000
+    value: null
+    description: Prometheus Rule Provisioner security context run as user
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_CPU
+    validation:
+      type: text
+      required: false
+    value: 25m
+    description: Prometheus Rule Provisioner CPU request
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 512Mi
+    description: Prometheus Rule Provisioner memory limit
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_MEMORY
+    validation:
+      type: text
+      required: false
+    value: 512Mi
+    description: Prometheus Rule Provisioner memory request
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_CPU
+    validation:
+      type: text
+      required: false
+    value: 200m
+    description: Prometheus Rule Provisioner CPU limit
+  - name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_LOGGING_LEVELS
+    validation:
+      required: false
+      type: text
+    value: LOGGING_LEVEL=info
+    description: |
+      Comma-separated list of custom logging levels per logger. Logger names must be written in snake_case, logging levels as defined by log4j2. Example: "LOGGING_LEVEL=WARN,ORG_THIRDPARTY=ERROR"
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-node-selector
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_NODE_SELECTOR_KEY', '') ==
+        "dummySelector"
+    then:
+    - action: delete
+      path: spec.template.spec.nodeSelector
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-route
+    when:
+      matching:
+        kind: Route
+        metadata.name: prometheus
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_ROUTE_HOSTNAME', '').isEmpty()
+    then:
+    - action: delete
+      path: spec.host
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-data-storageclass
+    when:
+      matching:
+        kind: PersistentVolumeClaim
+        metadata.name: prometheus-data
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_PVC_STORAGE_CLASSNAME_DATA',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.storageClassName
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-affinity
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_PODANTIAFFINITY_TOPOLOGY_KEY',
+        '').isEmpty()
+    then:
+    - action: delete
+      path: spec.template.spec.affinity
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-cluster-name
+    when:
+      matching:
+        kind: Secret
+        metadata.name: prometheus-configuration
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_CLUSTER_NAME', '').isEmpty()
+    then:
+    - action: apply
+      script: |
+        String configuration = $.stringData["prometheus.yml"];
+
+        $.stringData.remove("prometheus.yml");
+
+        if ($.?stringData == null) {
+          $.stringData = new java.util.HashMap();
+        }
+
+        String[] lines = configuration.split("\n");
+        StringBuilder finalConfiguration = new StringBuilder("");
+
+        for (String s : lines) {
+          if (!s.contains("    cluster: '")) {
+            finalConfiguration.append(s).append("\n");
+          }
+        }
+
+        $.stringData.put("prometheus.yml", finalConfiguration.toString());
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-cluster-name-ocp4
+    when:
+      matching:
+        kind: Secret
+        metadata.name: prometheus-configuration-ocp4
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_CLUSTER_NAME', '').isEmpty()
+    then:
+    - action: apply
+      script: |
+        String configuration = $.stringData["prometheus.yml"];
+
+        $.stringData.remove("prometheus.yml");
+
+        if ($.?stringData == null) {
+          $.stringData = new java.util.HashMap();
+        }
+
+        String[] lines = configuration.split("\n");
+        StringBuilder finalConfiguration = new StringBuilder("");
+
+        for (String s : lines) {
+          if (!s.contains("    cluster: '")) {
+            finalConfiguration.append(s).append("\n");
+          }
+        }
+
+        $.stringData.put("prometheus.yml", finalConfiguration.toString());
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-hostpath
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+    then:
+    - action: apply
+      script: |
+        def processVolume(volumeName, hostPath) {
+          volumes = $.spec.template.spec.volumes;
+          for (int i = 0; i < volumes.size(); i++) {
+            if (volumes[i].name == volumeName ) {
+              volumes.remove(i);
+              volumes.add(i, ["name": volumeName, "hostPath": ["type": "", "path": hostPath]]);
+            }
+          }
+          $.spec.template.spec.volumes = volumes;
+        }
+        if ('${AVALOQ_PROMETHEUS_VOLUME_HOSTPATH_DATA}'.length() > 0) {
+          processVolume('prometheus-data', '${AVALOQ_PROMETHEUS_VOLUME_HOSTPATH_DATA}');
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-configuration
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+    then:
+    - action: apply
+      script: |
+        def processVolume(volumeName, configurationName) {
+          volumes = $.spec.template.spec.volumes;
+          for (int i = 0; i < volumes.size(); i++) {
+            if (volumes[i].name == volumeName ) {
+              volumes.remove(i);
+              volumes.add(i, ["name": volumeName, "secret": ["defaultMode": "420", "secretName": configurationName]]);
+            }
+          }
+          $.spec.template.spec.volumes = volumes;
+        }
+
+        if ('${OPENSHIFT_VERSION}' == 4) {
+          processVolume('prometheus-configuration', 'prometheus-configuration-ocp4');
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-configuration-etcd-certificates-mount
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+    then:
+    - action: apply
+      script: |
+        def removeEtcdVolume() {
+         volumes = $.spec.template.spec.volumes;
+           for (int i = 0; i < volumes.size(); i++) {
+             name = volumes[i].name;
+             if (name == "etcd-certificates"){
+               volumes.remove(i);
+             }
+          }
+          $.spec.template.spec.volumes = volumes;
+        }
+
+        if ('${OPENSHIFT_VERSION}' == 4) {
+          removeEtcdVolume();
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-configuration-etcd-certificates
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+    then:
+    - action: apply
+      script: |
+        def removeEtcdVolumeMounts() {
+          containers = $.spec.template.spec.containers;
+          for (int i = 0; i < containers.size(); i++) {
+            volumeMounts = containers[i].volumeMounts;
+            for (k = 0; k < volumeMounts.size(); k++) {
+              name = volumeMounts[k].name;
+              if(name == "etcd-certificates"){
+              volumeMounts.remove(k);
+              }
+            }
+          $.spec.template.spec.containers = containers;
+          }
+        }
+
+        if ('${OPENSHIFT_VERSION}' == 4) {
+          removeEtcdVolumeMounts();
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-prometheus-configuration-ocp4
+    when:
+      matching:
+        kind: Secret
+        metadata.name: prometheus-configuration
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 4
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-prometheus-configuration-ocp3
+    when:
+      matching:
+        kind: Secret
+        metadata.name: prometheus-configuration-ocp4
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 3
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-daemonset-in-openshift4
+    when:
+      matching:
+        kind: DaemonSet
+        metadata.name: node-exporter-daemonset
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 4
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-etcd-certificates-in-openshift4
+    when:
+      matching:
+        kind: Secret
+        metadata.name: etcd-certificates
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 4
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-rules-in-openshift4
+    when:
+      matching:
+        kind: ConfigMap
+        metadata.name: prometheus-rules-general
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 4
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-resources
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+    then:
+    - action: apply
+      script: |
+        def processResource(containerName, kind, type) {
+          containers = $.spec.template.spec.containers;
+          for (int i = 0; i < containers.size(); i++) {
+            if (containers[i].name == containerName ) {
+              containers[i].resources[kind].remove(type);
+            }
+          }
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RESOURCES_LIMIT_CPU}' == '') {
+          processResource('prometheus', 'limits', 'cpu');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RESOURCES_LIMIT_MEMORY}' == '') {
+          processResource('prometheus', 'limits', 'memory');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RESOURCES_REQUEST_CPU}' == '') {
+          processResource('prometheus', 'requests', 'cpu');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RESOURCES_REQUEST_MEMORY}' == '') {
+          processResource('prometheus', 'requests', 'memory');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_CPU}' == '') {
+          processResource('prometheus-proxy', 'limits', 'cpu');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_MEMORY}' == '') {
+          processResource('prometheus-proxy', 'limits', 'memory');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_CPU}' == '') {
+          processResource('prometheus-proxy', 'requests', 'cpu');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_MEMORY}' == '') {
+          processResource('prometheus-proxy', 'requests', 'memory');
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-provisioner-resources
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+    then:
+    - action: apply
+      script: |
+        def processResource(containerName, kind, type) {
+          containers = $.spec.template.spec.containers;
+          for (int i = 0; i < containers.size(); i++) {
+            if (containers[i].name == containerName ) {
+              containers[i].resources[kind].remove(type);
+            }
+          }
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_CPU}' == '') {
+          processResource('prometheus-rule-provisioner', 'limits', 'cpu');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_MEMORY}' == '') {
+          processResource('prometheus-rule-provisioner', 'limits', 'memory');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_CPU}' == '') {
+          processResource('prometheus-rule-provisioner', 'requests', 'cpu');
+        }
+
+        if ('${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_MEMORY}' == '') {
+          processResource('prometheus-rule-provisioner', 'requests', 'memory');
+        }
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: prometheus-provisioner-logging-level
+    when:
+      matching:
+        kind: StatefulSet
+        metadata.name: prometheus
+      parameter: AVALOQ_PROMETHEUS_RULE_PROVISIONER_LOGGING_LEVELS
+    then:
+    - action: env
+      parameter:
+        name: AVALOQ_PROMETHEUS_RULE_PROVISIONER_LOGGING_LEVELS
+      container:
+        name: avaloq-prometheus-rule-provisioner
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-secrets
+    when:
+      matching:
+        kind: Secret
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_DEPLOY_SECRET', '') == false
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-pvcs
+    when:
+      matching:
+        kind: PersistentVolumeClaim
+      condition: params.getOrDefault('AVALOQ_PROMETHEUS_DEPLOY_PVC', '') == false
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: avaloq/v1
+kind: AvaloqPatch
+spec:
+  patches:
+  - name: disable-prometheus-alerts
+    when:
+      matching:
+        kind: ConfigMap
+        metadata.name: prometheus-alerts
+      condition: params.getOrDefault('OPENSHIFT_VERSION', '') == 3 || params.getOrDefault('AVALOQ_PROMETHEUS_ALERTS',
+        '') == false
+    then:
+    - action: apply
+      script: |-
+        if ($.metadata.get("annotations") == null) {
+          $.metadata.put("annotations", new java.util.HashMap());
+        }
+        $.metadata.annotations.put("installator.avaloq.com/ignore", "always");
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-cluster-reader
+  labels:
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-reader
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: ${OPENSHIFT_NAMESPACE}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rule-provisioner-configmap-viewer
+  labels:
+    avaloq.com/app: prometheus-rule-provisioner
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rule-provisioner-configmap-viewer
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: ${OPENSHIFT_NAMESPACE}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  labels:
+    acpr.avaloq.com/kind: prometheus-rules
+    rule-type: infrastructure
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+data:
+  prometheus.rules: |-
+    groups:
+      - name: prometheus-alert-rules
+        rules:
+        - alert: VolumeSpaceUsage20%Free
+          expr: 100 - 100 * ( kubelet_volume_stats_available_bytes{persistentvolumeclaim="prometheus-data"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-data"} ) > 80
+          labels:
+            severity: warning
+          annotations:
+            message: "{{ $labels.persistentvolumeclaim }} has less than 20% of free disk space ({{ $value }}% used)"
+            summary: "Volume {{ $labels.persistentvolumeclaim }} is low on disk space"
+        - alert: VolumeSpaceUsage15%Free
+          expr: 100 - 100 * ( kubelet_volume_stats_available_bytes{persistentvolumeclaim="prometheus-data"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="prometheus-data"} ) > 85
+          labels:
+            severity: critical
+          annotations:
+            message: "{{ $labels.persistentvolumeclaim }} has less than 15% of free disk space ({{ $value }}% used)"
+            summary: "Volume {{ $labels.persistentvolumeclaim }} is low on disk space"
+---
+kind: ConfigMap
+apiVersion: v1
+data:
+  auth: ${prometheus-configuration/htpasswd}
+metadata:
+  name: prometheus-htpasswd
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    acpr.avaloq.com/kind: prometheus-rules
+    rule-type: infrastructure
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+  name: prometheus-rules-general
+data:
+  general.rules:
+    groups:
+    - name: acpr-rules
+      rules:
+      - alert: AlertmanagerDown [PAM1]
+        annotations:
+          message: Alertmanager has disappeared from Prometheus target discovery.
+          description: No new Alertmanager metrics available anymore.
+        expr: |
+          absent(up{job="alertmanager"} == 1)
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: NodeExporterDown [PAM5]
+        annotations:
+          message: NodeExporter has disappeared from Prometheus target discovery.
+          description: No new node_exporter metrics from the affected system available
+            anymore.
+        expr: |
+          absent(up{job="node-exporters"} == 1)
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: PrometheusDown [PAM6]
+        annotations:
+          message: Prometheus has disappeared from Prometheus target discovery.
+          description: No new Prometheus metrics from Prometheus available anymore.
+        expr: |
+          absent(up{job="prometheus"} == 1)
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: AlertmanagerFailedReload [PAM12]
+        annotations:
+          message: Alertmanager's configuration reload failed
+          description: Reloading Alertmanager's configuration has failed for {{ $labels.namespace
+            }}/{{ $labels.pod}}.
+        expr: |
+          alertmanager_config_last_reload_successful{job="alertmanager"} == 0
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: TargetDown [PAM13]
+        annotations:
+          message: Targets are down
+          description: '{{ $value }}% of {{ $labels.job }} targets are down.'
+        expr: 100 * (count(up == 0) BY (job) / count(up) BY (job)) > 10
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusConfigReloadFailed [PAM14]
+        annotations:
+          message: Reloading Prometheus' configuration failed
+          description: Reloading Prometheus' configuration has failed for {{$labels.namespace}}/{{$labels.pod}}.
+        expr: |
+          prometheus_config_last_reload_successful{job="prometheus"} == 0
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusNotificationQueueRunningFull [PAM15]
+        annotations:
+          message: Prometheus' alert notification queue is running full
+          description: Prometheus' alert notification queue is running full for {{$labels.namespace}}/{{
+            $labels.pod}}.
+        expr: |
+          predict_linear(prometheus_notifications_queue_length{job="prometheus"}[5m], 60 * 30) > prometheus_notifications_queue_capacity{job="prometheus"}
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusErrorSendingAlerts [PAM16]
+        annotations:
+          message: Errors while sending alerts from Prometheus
+          description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{$labels.pod}}
+            to Alertmanager {{$labels.Alertmanager}}.
+        expr: |
+          rate(prometheus_notifications_errors_total{job="prometheus"}[5m]) / rate(prometheus_notifications_sent_total{job="prometheus"}[5m]) > 0.01
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusErrorSendingAlerts [PAM17]
+        annotations:
+          message: Errors while sending alerts from Prometheus
+          description: Errors while sending alerts from Prometheus {{$labels.namespace}}/{{$labels.pod}}
+            to Alertmanager {{$labels.Alertmanager}}.
+        expr: |
+          rate(prometheus_notifications_errors_total{job="prometheus"}[5m]) / rate(prometheus_notifications_sent_total{job="prometheus"}[5m]) > 0.03
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: PrometheusNotConnectedToAlertmanagers [PAM18]
+        annotations:
+          message: Prometheus is not connected to any Alertmanagers
+          description: Prometheus {{ $labels.namespace }}/{{ $labels.pod}} is not
+            connected to any Alertmanagers.
+        expr: |
+          prometheus_notifications_alertmanagers_discovered{job="prometheus"} < 1
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusTSDBReloadsFailing [PAM19]
+        annotations:
+          message: Prometheus has issues reloading data blocks from disk
+          description: '{{$labels.job}} at {{$labels.instance}} had {{$value | humanize}}
+            reload failures over the last two hours.'
+        expr: |
+          increase(prometheus_tsdb_reloads_failures_total{job="prometheus"}[2h]) > 0
+        for: 12h
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusTSDBCompactionsFailing [PAM20]
+        annotations:
+          message: Prometheus has issues compacting sample blocks
+          description: '{{$labels.job}} at {{$labels.instance}} had {{$value | humanize}}
+            compaction failures over the last two hours.'
+        expr: |
+          increase(prometheus_tsdb_compactions_failed_total{job="prometheus"}[2h]) > 0
+        for: 12h
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusTSDBWALCorruptions [PAM21]
+        annotations:
+          message: Prometheus write-ahead log is corrupted
+          description: '{{$labels.job}} at {{$labels.instance}} has a corrupted write-ahead
+            log (WAL).'
+        expr: |
+          prometheus_tsdb_wal_corruptions_total{job="prometheus"} > 0
+        for: 4h
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusNotIngestingSamples [PAM22]
+        annotations:
+          message: Prometheus isn't ingesting samples
+          description: Prometheus {{ $labels.namespace }}/{{ $labels.pod}} isn't ingesting
+            samples.
+        expr: |
+          rate(prometheus_tsdb_head_samples_appended_total{job="prometheus"}[5m]) <= 0
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: PrometheusTargetScrapesDuplicate [PAM23]
+        annotations:
+          message: Prometheus has many samples rejected
+          description: '{{$labels.namespace}}/{{$labels.pod}} has many samples rejected
+            due to duplicate timestamps but different values'
+        expr: |
+          increase(prometheus_target_scrapes_sample_duplicate_timestamp_total{job="prometheus"}[5m]) > 0
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: EtcdInsufficientMembers [PAM28]
+        annotations:
+          message: Etcd cluster has insufficient members
+          description: 'Etcd cluster {{ $labels.job }}: insufficient members ({{ $value
+            }}).'
+        expr: |
+          count(up{job=~".*etcd.*"} == 0) by (job) > (count(up{job=~".*etcd.*"}) by (job) / 2 - 1)
+        for: 3m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: EtcdNoLeader [PAM30]
+        annotations:
+          message: Etcd cluster has no leader
+          description: 'Etcd cluster {{ $labels.job }}: member {{ $labels.instance
+            }} has no leader.'
+          runbook: https://docs.avaloq.com/tools/avaloqcontainerplatform/700_Runbooks/030_pam30.html
+        expr: |
+          etcd_server_has_leader{job=~".*etcd.*"} == 0
+        for: 1m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: EtcdHighNumberOfLeaderChanges [PAM27]
+        annotations:
+          message: Etcd cluster has leader changes
+          description: 'Etcd cluster {{ $labels.job }}: instance {{ $labels.instance
+            }} has seen {{ $value }} leader changes within the last hour.'
+        expr: |
+          rate(etcd_server_leader_changes_seen_total{job=~".*etcd.*"}[15m]) > 3
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: EtcdMemberCommunicationSlow [PAM29]
+        annotations:
+          message: Etcd cluster communication is slow
+          description: 'Etcd cluster {{ $labels.job }}: member communication with
+            {{ $labels.To }} is taking {{ $value }}s on etcd instance {{ $labels.instance
+            }}.'
+        expr: |
+          histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket{job=~".*etcd.*"}[5m]))
+          > 0.15
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: EtcdHighNumberOfFailedProposals [PAM26]
+        annotations:
+          message: Etcd cluster has proposal failures
+          description: 'Etcd cluster {{ $labels.job }}: {{ $value }} proposal failures
+            within the last hour on etcd instance {{ $labels.instance }}.'
+        expr: |
+          rate(etcd_server_proposals_failed_total{job=~".*etcd.*"}[15m]) > 5
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: EtcdHighFsyncDurations [PAM25]
+        annotations:
+          message: Etcd cluster has high fsync duration
+          description: 'Etcd cluster {{ $labels.job }}: 99th percentile fsync durations
+            are {{ $value }}s on etcd instance {{ $labels.instance }}.'
+        expr: |
+          histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=~".*etcd.*"}[5m]))
+          > 0.5
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: EtcdHighCommitDurations [PAM24]
+        annotations:
+          message: Etcd cluster has high commit duration
+          description: 'Etcd cluster {{ $labels.job }}: 99th percentile commit durations
+            {{ $value }}s on etcd instance {{ $labels.instance }}.'
+        expr: |
+          histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket{job=~".*etcd.*"}[5m]))
+          > 0.25
+        for: 10m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: KubeAPIDown [PAM2]
+        annotations:
+          message: KubeAPI has disappeared from Prometheus target discovery.
+          description: No new  Kubernetes object specific metrics gathered via API
+            available anymore.
+        expr: |
+          absent(up{job="kubernetes-apiservers"} == 1)
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: KubeControllerManagerDown [PAM3]
+        annotations:
+          message: KubeControllerManager has disappeared from Prometheus target discovery.
+          description: No new Kubernetes controller metrics available anymore.
+        expr: |
+          absent(up{job="kubernetes-controllers"} == 1)
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: KubeletDown [PAM4]
+        annotations:
+          message: Kubelet has disappeared from Prometheus target discovery.
+          description: No new Kubernetes node metrics available anymore.
+        expr: |
+          absent(up{job="kubernetes-nodes"} == 1)
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: KubePodNotReady [PAM7]
+        annotations:
+          message: Some pods are not ready
+          description: Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in ready
+            state.
+        expr: |
+          sum by (namespace, pod) (kube_pod_status_phase{namespace=~"(acpr-.*|openshift-.*|kube-.*|default|logging)",job="kubernetes-pods", phase=~"Pending|Unknown"}) > 0
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: KubeNodeNotReady [PAM8]
+        annotations:
+          message: Kubernetes node is unready
+          description: Kubernetes node {{ $labels.node }} has been unready for more
+            than an hour
+        expr: |
+          kube_node_status_condition{job="kubernetes-pods",condition="Ready",status="true"} == 0
+        for: 1h
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: KubeVersionMismatch [PAM9]
+        annotations:
+          message: There are {{ $value }} different versions of Kubernetes components
+            running.
+          description: There are {{ $value }} different versions of Kubernetes components
+            running.
+        expr: |
+          count(count(kubernetes_build_info{job!="kube-dns"}) by (gitVersion)) > 1
+        for: 1h
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: KubeClientCertificateExpiration [PAM10]
+        annotations:
+          message: A client certificate that is used to call the Kubernetes API is
+            expiring in less than 7 days.
+          description: A client certificate that is used to call the Kubernetes API
+            is expiring in less than 7 days.
+          runbook: https://docs.avaloq.com/tools/avaloqcontainerplatform/700_Runbooks/010_PAM10-11.html
+        expr: |
+          histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="kubernetes-apiservers"}[5m]))) < 604800
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: LOW
+      - alert: KubeClientCertificateExpiration [PAM11]
+        annotations:
+          message: A client certificate that is used to call the Kubernetes API is
+            expiring in less than 1 day.
+          description: A client certificate that is used to call the Kubernetes API
+            is expiring in less than 1 day.
+          runbook: https://docs.avaloq.com/tools/avaloqcontainerplatform/700_Runbooks/010_PAM10-11.html
+        expr: |
+          histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="kubernetes-apiservers"}[5m]))) < 86400
+        for: 15m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: FileWithCustomMetricsIsOld [PAM31]
+        annotations:
+          message: File with custom metrics is old
+          description: File with custom metrics {{$labels.file}} on node {{$labels.instance}}
+            is older than 3 minutes
+        expr: |
+          (time() - node_textfile_mtime_seconds) > 180
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: FileWithCustomMetricsCantBeRead [PAM32]
+        annotations:
+          message: File with custom metrics can't be read
+          description: One of the files on {{$labels.instance}} can't be read
+        expr: |
+          node_textfile_scrape_error == 1
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: NfsProcessesAreStuckInIoOperations [PAM33]
+        annotations:
+          message: Processes are waiting for NFS IO
+          description: More than one process is waiting for NFS IO operations on {{$labels.instance}}
+        expr: |
+          acpr_nfs_wait_processes > 0
+        for: 1m
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: NodeExporterIsNotReachable [PAM47]
+        for: 5m
+        annotations:
+          message: Prometheus Node exporter is not reachable
+          description: Prometheus Node exporter on {{ $labels.instance }} is not reachable
+        expr: |
+          up{job="node-exporters"} != 1
+        labels:
+          ruletype: infrastructure
+          severity: HIGH
+      - alert: AvaloqApplicationsPodNotReady [PAM74]
+        annotations:
+          message: Some pods are not ready
+          description: Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in ready
+            state.
+        expr: |
+          sum by (namespace, pod) (kube_pod_status_phase{namespace!="(acpr-.*|openshift-.*|kube-.*|default|logging)",job="kubernetes-pods", phase=~"Pending|Unknown"}) > 0
+        for: 15m
+        labels:
+          severity: LOW
+      - alert: AvaloqApplicationsPodNotReady [PAM75]
+        annotations:
+          message: Some pods are not ready
+          description: Pod {{ $labels.namespace }}/{{ $labels.pod }} is not in ready
+            state.
+        expr: |
+          sum by (namespace, pod) (kube_pod_status_phase{namespace!="(acpr-.*|openshift-.*|kube-.*|default|logging)",job="kubernetes-pods", phase=~"Pending|Unknown"}) > 0
+        for: 1h
+        labels:
+          severity: HIGH
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter-daemonset
+  labels:
+    avaloq.com/app: prometheus-node-exporter
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      avaloq.com/app: prometheus-node-exporter
+  template:
+    metadata:
+      labels:
+        avaloq.com/app: prometheus-node-exporter
+        app.kubernetes.io/component: monitoring
+      name: node-exporter-daemonset
+    spec:
+      serviceAccountName: prometheus
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - image: ${AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY}${AVALOQ_PROMETHEUS_NODE_EXPORTER_CONTAINER_IMAGE}
+        args:
+        - '--web.listen-address=:${AVALOQ_PROMETHEUS_NODE_EXPORTER_PORT}'
+        - --path.procfs=/host/proc
+        - --path.sysfs=/host/sys
+        name: node-exporter
+        ports:
+        - containerPort: ${AVALOQ_PROMETHEUS_NODE_EXPORTER_PORT}
+          name: scrape
+        resources:
+          limits:
+            memory: ${AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_LIMIT_MEMORY}
+            cpu: ${AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_LIMIT_CPU}
+          requests:
+            memory: ${AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_REQUEST_MEMORY}
+            cpu: ${AVALOQ_PROMETHEUS_NODE_EXPORTER_RESOURCES_REQUEST_CPU}
+        volumeMounts:
+        - name: proc
+          readOnly: true
+          mountPath: /host/proc
+        - name: sys
+          readOnly: true
+          mountPath: /host/sys
+      volumes:
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: sys
+        hostPath:
+          path: /sys
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: grafana-prometheus
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9090
+      protocol: TCP
+    from:
+    - podSelector:
+        matchLabels:
+          avaloq.com/app: grafana
+  podSelector:
+    matchLabels:
+      avaloq.com/app: prometheus
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-route
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 8443
+      protocol: TCP
+    from:
+    - namespaceSelector:
+        matchLabels:
+          network.openshift.io/policy-group: ingress
+  podSelector:
+    matchLabels:
+      avaloq.com/app: prometheus
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-ruleprovisioner
+  labels:
+    avaloq.com/app: prometheus-rule-provisioner
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9090
+      protocol: TCP
+    from:
+    - podSelector:
+        matchLabels:
+          avaloq.com/app: prometheus-rule-provisioner
+  podSelector:
+    matchLabels:
+      avaloq.com/app: prometheus-rule-provisioner
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ruleprovisioner-prometheus
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 8443
+      protocol: TCP
+    from:
+    - podSelector:
+        matchLabels:
+          avaloq.com/app: prometheus-rule-provisioner
+  podSelector:
+    matchLabels:
+      avaloq.com/app: prometheus
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+spec:
+  accessModes:
+  - ${AVALOQ_PROMETHEUS_PVC_STORAGE_ACCESSMODE_DATA}
+  resources:
+    requests:
+      storage: ${AVALOQ_PROMETHEUS_PVC_STORAGE_REQUEST_DATA}
+  storageClassName: ${AVALOQ_PROMETHEUS_PVC_STORAGE_CLASSNAME_DATA}
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: prometheus
+  annotations:
+    haproxy.router.openshift.io/timeout: 600s
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+spec:
+  host: ${AVALOQ_PROMETHEUS_ROUTE_HOSTNAME}
+  port:
+    targetPort: prometheus-proxy
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: reencrypt
+  to:
+    kind: Service
+    name: prometheus-proxy
+    weight: 100
+  wildcardPolicy: None
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  etcd-ca-certificate: ${etcd-certificates/etcd-ca-certificate}
+  etcd-certificate: ${etcd-certificates/etcd-certificate}
+  etcd-key: ${etcd-certificates/etcd-key}
+metadata:
+  name: etcd-certificates
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  prometheus.yml: ${prometheus-configuration/prometheus-configuration.yml}
+metadata:
+  name: prometheus-configuration
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  prometheus.yml: ${prometheus-configuration/prometheus-configuration-ocp4.yml}
+metadata:
+  name: prometheus-configuration-ocp4
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  session_secret: ${AVALOQ_PROMETHEUS_SESSION_SECRET}
+metadata:
+  name: prometheus-session-secret
+  labels:
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+kind: Secret
+apiVersion: v1
+stringData:
+  application.yaml: |
+    prometheusPass: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_PASSWORD}
+    prometheusUser: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_USERNAME}
+    prometheusCert: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_PROMETHEUS_CERT_PATH}
+    prometheusHost: "localhost:9090"
+metadata:
+  name: provisioner-prometheus-password
+  labels:
+    avaloq.com/app: prometheus-rule-provisioner
+    app.kubernetes.io/component: monitoring
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+  name: prometheus-direct
+spec:
+  ports:
+  - name: prometheus-direct
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    avaloq.com/app: prometheus
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    avaloq.com/app: prometheus
+    app.kubernetes.io/component: monitoring
+  name: prometheus-proxy
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: prometheus-tls
+spec:
+  ports:
+  - name: prometheus-proxy
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    avaloq.com/app: prometheus
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    avaloq.com/app: prometheus-rule-provisioner
+    app.kubernetes.io/component: monitoring
+  name: prometheus-rule-provisioner-direct
+spec:
+  ports:
+  - name: prometheus-rule-provisioner-direct
+    port: 9091
+    protocol: TCP
+    targetPort: 9091
+  selector:
+    avaloq.com/app: prometheus-rule-provisioner
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  labels:
+    app.kubernetes.io/component: monitoring
+  annotations:
+    serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"prometheus"}}'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-rule-provisioner
+  labels:
+    app.kubernetes.io/component: monitoring
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/component: monitoring
+    avaloq.com/app: prometheus
+    avaloq.com/zone: core-internal
+  name: prometheus
+spec:
+  replicas: ${AVALOQ_PROMETHEUS_REPLICAS}
+  selector:
+    matchLabels:
+      avaloq.com/app: prometheus
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: '9091'
+        prometheus.io/scheme: http
+        prometheus.io/scrape: 'true'
+      labels:
+        app.kubernetes.io/component: monitoring
+        avaloq.com/app: prometheus
+        avaloq.com/zone: core-internal
+      name: prometheus
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                avaloq.com/app: prometheus
+            topologyKey: ${AVALOQ_PROMETHEUS_PODANTIAFFINITY_TOPOLOGY_KEY}
+      containers:
+      - args:
+        - -provider=openshift
+        - -https-address=:8443
+        - -http-address=
+        - -email-domain=*
+        - -upstream=http://localhost:9090
+        - -openshift-ca=/etc/pki/tls/cert.pem
+        - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        - -openshift-service-account=prometheus
+        - -tls-cert=/etc/tls/private/tls.crt
+        - -tls-key=/etc/tls/private/tls.key
+        - -client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+        - -cookie-secret-file=/etc/proxy/secrets/session_secret
+        - -skip-auth-regex=^/metrics
+        - -skip-auth-regex=^/-/healthy
+        - -cookie-expire=4h
+        - '-display-htpasswd-form=${AVALOQ_PROMETHEUS_SHOW_HTPASSWD_FORM}'
+        - -htpasswd-file=/etc/proxy/htpasswd/auth
+        image: ${AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY}${AVALOQ_PROMETHEUS_PROXY_CONTAINER_IMAGE}
+        imagePullPolicy: ${AVALOQ_PROMETHEUS_CONTAINER_IMAGE_PULL_POLICY}
+        name: prometheus-proxy
+        ports:
+        - containerPort: 8443
+          name: proxy
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_PROMETHEUS_PROXY_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_PROMETHEUS_PROXY_RESOURCES_REQUEST_MEMORY}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/tls/private
+          name: prometheus-tls
+        - mountPath: /etc/proxy/secrets
+          name: prometheus-session-secret
+        - mountPath: /prometheus
+          name: prometheus-data
+        - mountPath: /etc/proxy/htpasswd
+          name: prometheus-htpasswd
+      - args:
+        - '--storage.tsdb.retention=${AVALOQ_PROMETHEUS_DATABASE_RETENTION_TIME}'
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --web.enable-lifecycle
+        - --web.listen-address=:9090
+        - --log.level=info
+        image: ${AVALOQ_REDHAT_CONTAINER_IMAGE_REGISTRY}${AVALOQ_PROMETHEUS_CONTAINER_IMAGE}
+        imagePullPolicy: ${AVALOQ_PROMETHEUS_CONTAINER_IMAGE_PULL_POLICY}
+        name: prometheus
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: direct
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        ports:
+        - containerPort: 9090
+          name: direct
+          protocol: TCP
+        resources:
+          limits:
+            cpu: ${AVALOQ_PROMETHEUS_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_PROMETHEUS_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_PROMETHEUS_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_PROMETHEUS_RESOURCES_REQUEST_MEMORY}
+        securityContext:
+          privileged: '${AVALOQ_PROMETHEUS_SECURITYCONTEXT_PRIVILEGED}'
+          runAsUser: ${AVALOQ_PROMETHEUS_SECURITYCONTEXT_RUNASUSER}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/pki/etcd
+          name: etcd-certificates
+        - mountPath: /etc/prometheus
+          name: prometheus-configuration
+        - mountPath: /prometheus
+          name: prometheus-data
+        - mountPath: /etc/prometheus/rules
+          name: prometheus-rules-volume
+      - name: prometheus-rule-provisioner
+        image: ${AVALOQ_CONTAINER_IMAGE_REGISTRY}${AVALOQ_PROMETHEUS_RULE_PROVISIONER_CONTAINER_IMAGE}
+        imagePullPolicy: ${AVALOQ_PROMETHEUS_CONTAINER_IMAGE_PULL_POLICY}
+        ports:
+        - containerPort: 9091
+          name: http
+          protocol: TCP
+        env:
+        - name: WATCHED_NAMESPACE
+          value: '*'
+        - name: RULE_TYPES
+          value: infrastructure,application
+        - name: FULL_RECONCILIATION_INTERVAL_S
+          value: '3600'
+        - name: COLORS
+          value: 'false'
+        - name: METRICS
+          value: 'true'
+        - name: METRICS_JVM
+          value: 'true'
+        - name: METRICS_PORT
+          value: '9091'
+        - name: PROCESS_RULE_TYPES
+          value: application,infrastructure
+        resources:
+          limits:
+            cpu: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_CPU}
+            memory: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_LIMIT_MEMORY}
+          requests:
+            cpu: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_CPU}
+            memory: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_RESOURCES_REQUEST_MEMORY}
+        securityContext:
+          privileged: '${AVALOQ_PROMETHEUS_RULE_PROVISIONER_SECURITYCONTEXT_PRIVILEGED}'
+          runAsUser: ${AVALOQ_PROMETHEUS_RULE_PROVISIONER_SECURITYCONTEXT_RUNASUSER}
+        volumeMounts:
+        - mountPath: /opt/avaloq/prometheus/rules
+          name: prometheus-rules-volume
+        - mountPath: /opt/avaloq/prometheus/configuration
+          name: provisioner-prometheus-password
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: prometheus
+      serviceAccountName: prometheus
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        ${AVALOQ_PROMETHEUS_NODE_SELECTOR_KEY}: '${AVALOQ_PROMETHEUS_NODE_SELECTOR_VALUE}'
+      volumes:
+      - name: prometheus-configuration
+        secret:
+          defaultMode: 420
+          secretName: prometheus-configuration
+      - name: prometheus-session-secret
+        secret:
+          defaultMode: 420
+          secretName: prometheus-session-secret
+      - name: prometheus-tls
+        secret:
+          defaultMode: 420
+          secretName: prometheus-tls
+      - name: prometheus-data
+        persistentVolumeClaim:
+          claimName: prometheus-data
+      - name: prometheus-rules-volume
+        emptyDir: {}
+      - name: prometheus-htpasswd
+        configMap:
+          defaultMode: 420
+          name: prometheus-htpasswd
+      - name: etcd-certificates
+        secret:
+          defaultMode: 420
+          secretName: etcd-certificates
+      - name: provisioner-prometheus-password
+        secret:
+          defaultMode: 256
+          secretName: provisioner-prometheus-password

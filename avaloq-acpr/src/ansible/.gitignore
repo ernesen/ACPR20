@@ -1,0 +1,7 @@
+inventory
+*.retry
+libexec
+profiles
+.terraform
+terraform.tfstate.d
+README.txt

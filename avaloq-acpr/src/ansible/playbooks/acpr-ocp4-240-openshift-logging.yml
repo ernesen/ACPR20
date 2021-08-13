@@ -1,0 +1,181 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [4]
+
+- name: Verify user in 'acpr_cluster_credentials' variable has required type
+  import_playbook: helper_playbooks/cluster_credentials.yml
+  vars:
+    cluster_credentials_required_type: 'cluster-admin-user'
+  when: acpr_cluster_credentials is defined
+
+- name: ACPR | Install openshift-4-logging-operator
+  hosts: localhost
+  become: false
+  module_defaults:
+    group/k8s:
+      host: "{{ acpr_cluster_credentials[0]['url'] | default('https://api.{{ os_cluster_name }}:6443') }}"
+      ca_cert: "{{ acpr_cluster_credentials[0]['certificateAuthorityPath'] | default(ca_certificate.path) | default('') }}"
+      validate_certs: "{{ 'no' if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default('no' if acpr_cluster_credentials is undefined) | default(False) else 'yes' }}"
+  pre_tasks:
+      - name: Generate kubeconf path
+        set_fact:
+          KUBECONFIG: '/tmp/acpr-kube-{{ 10000000|random }}/config'
+      - name: Create kubedir
+        file:
+          path: '{{ KUBECONFIG|dirname }}'
+          mode: 0700
+          state: directory
+
+      - name: Check if generated KUBECONFIG file exists
+        stat:
+          path: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+        register: authkubeconfig
+
+      - name: Set 'authfile' variable
+        set_fact:
+          authfile: "{{ lookup('env', 'HOME') }}/acpr/{{ os_cluster_name }}/auth/kubeconfig"
+        when: authkubeconfig.stat.exists
+
+      - name: Create a temporary file for the CA certificate
+        tempfile:
+          state: file
+        register: ca_certificate
+        check_mode: no
+        no_log: true
+        when: >
+            (acpr_cluster_credentials[0]['certificateAuthority'] | default('') | length > 0)
+
+      - name: Save CA certificate to the temporary file
+        copy:
+          content: "{{ acpr_cluster_credentials[0]['certificateAuthority'] }}"
+          dest: "{{ ca_certificate.path }}"
+        check_mode: no
+        when: >
+            (acpr_cluster_credentials[0]['certificateAuthority'] | default('') | length > 0)
+
+      - name: Obtain user's token using username and password
+        k8s_auth:
+          username: "{{ acpr_cluster_credentials[0]['username'] | default('') }}"
+          password: "{{ acpr_cluster_credentials[0]['password'] | default('') }}"
+          validate_certs: "{{ 'no' if acpr_cluster_credentials[0]['insecureSkipTlsVerify'] | default('no' if acpr_cluster_credentials is undefined) | default(False) else 'yes' }}"
+        check_mode: no
+        when: >
+          (
+            (not acpr_cluster_credentials[0]['token'] | default() | string | length > 0) and
+            (acpr_cluster_credentials[0]['username'] | default() | string | length > 0) and
+            (acpr_cluster_credentials[0]['password'] | default() | string | length > 0)
+          )
+        register: k8s_auth_results
+        no_log: true
+
+      - name: Set 'api_key' variable
+        check_mode: no
+        no_log: true
+        set_fact:
+          api_key: "{{ k8s_auth_results.k8s_auth.api_key | default(acpr_cluster_credentials[0]['token']) | default() | string }}"
+
+      - name: Create 'openshift-operators-redhat' Namespace
+        no_log: true
+        k8s:
+          api_key: "{{ api_key | default(omit) }}"
+          kubeconfig: "{{ authfile | default(omit) }}"
+          name: openshift-operators-redhat
+          api_version: v1
+          kind: Namespace
+          state: present
+          definition:
+            metadata:
+              labels:
+                app.kubernetes.io/managed-by: avaloq-acpr
+
+      - name: Create 'openshift-logging' Namespace
+        no_log: true
+        k8s:
+          api_key: "{{ api_key | default(omit) }}"
+          kubeconfig: "{{ authfile | default(omit) }}"
+          name: openshift-logging
+          api_version: v1
+          kind: Namespace
+          state: present
+          definition:
+            metadata:
+              labels:
+                app.kubernetes.io/managed-by: avaloq-acpr
+  post_tasks:
+    - name: Cleanup kubedir
+      file:
+        path: '{{ KUBECONFIG|dirname }}'
+        state: absent
+  roles:
+    - role: avaloq.constellation-deployment
+      vars:
+        acd_namespace: 'openshift-operators-redhat'
+        acd_image_existence: False
+        acd_inst_lint: False
+        acd_const_loc: "{{ acpr_constellations_path | default( playbook_dir + '/../../constellations') }}/openshift-logging-operator"
+        acd_inst_params: '--ignore-unspecified-objects'
+
+    - role: avaloq.constellation-deployment
+      vars:
+        acd_namespace: 'openshift-logging'
+        acd_image_existence: False
+        acd_inst_lint: False
+        acd_const_loc: "{{ acpr_constellations_path | default( playbook_dir + '/../../constellations') }}/openshift-logging"
+        acd_inst_params: '--ignore-unspecified-objects'
+  tasks:
+    - name: Convert variable 'constellation_commands_cluster_admin' to string
+      no_log: true
+      set_fact:
+        constellation_commands_cluster_admin: "{{ constellation_commands_cluster_admin | string }}"
+
+    - name: Define 'managed_state' variable
+      no_log: true
+      set_fact:
+        managed_state: [ ]
+
+    - name: Check if switch to Managed state is required
+      no_log: true
+      set_fact:
+        managed_state: "{{ managed_state + [ 'true' ] }}"
+      when: item in constellation_commands_cluster_admin
+      loop:
+        - instance.yml
+        - syslog.yml
+        - secure-forward.yml
+
+    - block:
+      - name: Set OpenShift logging to Managed
+        k8s:
+          api_key: "{{ api_key }}"
+          kubeconfig: "{{ authfile | default(omit) }}"
+          api_version: logging.openshift.io/v1
+          kind: ClusterLogging
+          namespace: openshift-logging
+          name: instance
+          state: present
+          merge_type: merge
+          wait: yes
+          definition:
+            spec:
+              managementState: Managed
+
+      - name: Wait for operator to initialize changes
+        wait_for:
+          timeout: 20
+      when: managed_state | length > 0

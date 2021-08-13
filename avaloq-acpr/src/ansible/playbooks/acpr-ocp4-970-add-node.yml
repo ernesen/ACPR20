@@ -1,0 +1,73 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [4]
+
+- name: Verify user in 'acpr_cluster_credentials' variable has required type
+  import_playbook: helper_playbooks/cluster_credentials.yml
+  vars:
+    cluster_credentials_required_type: 'cluster-admin-user'
+  when: acpr_cluster_credentials is defined
+
+- name: ACPR | OpenShift 4 add node
+  hosts: localhost
+  become: false
+  gather_facts: false
+  pre_tasks:
+    - name: include avaloq.acpr-ocp4-utils
+      include_role:
+        name: avaloq.acpr-ocp4-utils
+        tasks_from: check_machineconfigpool_main.yml
+  tasks:
+  - name: Update worker ignition
+    include_role:
+      name: avaloq.acpr-ocp4-ignition-files
+      tasks_from: update-ignition.yml
+
+  - name: Show CoreOS hint
+    debug:
+      msg: "Please provision the new CoreOS node now"
+
+  - name: Get list of current worker nodes
+    command: 'oc get nodes -l node-role.kubernetes.io/worker= -o=jsonpath="{range .items[*]}{.metadata.name}{\"\n\"}{end}"' # noqa 301 - This task always needs to be run
+    register: current_cluster_nodes
+
+  - name: Show current cluster nodes
+    debug:
+      msg: "Current cluster nodes: {{ current_cluster_nodes.stdout_lines }}"
+      verbosity: 1
+
+  - name: Show expected cluster nodes
+    debug:
+      msg: "Expected cluster nodes: {{ acpr_cluster_nodes|selectattr('role', 'search', '^worker$')|map(attribute='name')|list }}"
+      verbosity: 1
+
+  - name: Calculate missing nodes
+    set_fact:
+      missing_cluster_nodes: "{{ acpr_cluster_nodes|selectattr('role', 'search', '^worker$')|map(attribute='name')|list|difference(current_cluster_nodes.stdout_lines) }}"
+
+  - name: Show missing cluster nodes
+    debug:
+      msg: "Missing cluster nodes:  {{ missing_cluster_nodes }}"
+      verbosity: 1
+
+  - name: include add_node
+    include_role:
+      name: avaloq.acpr-ocp4-utils
+      tasks_from: add_node.yml
+    loop: '{{ range(0, missing_cluster_nodes|length)|list }}'
+    when: missing_cluster_nodes > 0

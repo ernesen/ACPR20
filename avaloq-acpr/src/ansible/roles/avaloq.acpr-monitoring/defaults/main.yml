@@ -1,0 +1,172 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+namespace: acpr-monitoring
+prometheus_user: internal
+alertmanager_configuration: "{{ acpr_monitoring_alertmanager_configuration | default(default_alertmanager_configuration) }}"
+
+# Purge monitoring data during monitoring reinitialization
+acpr_monitoring_pvs_purge: false
+
+#acpr_monitoring_cluster_name:
+
+# Default Prometheus internal password
+#acpr_monitoring_prometheus_password:
+
+# Force to regenerate prometheus password
+acpr_monitoring_regenerate_prometheus_password: false
+
+# Restart all pods in the project to reload new configuration
+acpr_monitoring_restart_all_monitoring_pods: false
+
+# Prometheus additional jobs to scrape
+#acpr_monitoring_prometheus_additional_jobs:
+
+# 'openshift-monitoring' compatiblity
+acpr_monitoring_ocp3_rules: false
+acpr_monitoring_ocp3_node_exporter_compat: false
+acpr_monitoring_ocp3_prometheus_jobs: false
+
+# Hostnames
+#acpr_monitoring_grafana_hostname: grafana.example.com
+#acpr_monitoring_prometheus_hostname: prometheus.example.com
+#acpr_monitoring_alertmanager_hostname: alertmanager.example.com
+
+# Node selectors
+#acpr_monitoring_grafana_node_selector: node1.example.local
+#acpr_monitoring_prometheus_node_selector: node1.example.local
+
+# Prometheus database
+acpr_monitoring_prometheus_database_retention: 7d
+
+# Prometheus & grafana persistentVolumeClaim. Don't change this variable!
+acpr_monitoring_prometheus_persistent_volume_claim: prometheus-data
+acpr_monitoring_grafana_persistent_volume_claim: grafana-lib-pvc
+
+# Avaloq Prometheus rule and Avaloq Grafana dashboard provisioners images
+acpr_monitoring_prometheus_rule_provisioner_image: "{{ cust_prometheus_rule_provisioner_image | default(acpr_docker_registry_location + '/avaloq/avaloq-prometheus-rule-provisioner:0.2.4') }}"
+acpr_monitoring_grafana_dashboard_provisioner_image: "{{ cust_grafana_dashboard_provisioner_image | default(acpr_docker_registry_location + '/avaloq/avaloq-grafana-dashboard-provisioner:0.6.4') }}"
+
+# Other images
+acpr_monitoring_prometheus_node_exporter_image: "{{ cust_prometheus_node_exporter_image | default(acpr_docker_registry_location + '/openshift3/prometheus-node-exporter:' + acpr_os_version) }}"
+acpr_monitoring_kube_state_metrics_image: "{{ cust_kube_state_metrics_image | default(acpr_docker_registry_location + '/openshift3/ose-kube-state-metrics:' + acpr_os_version) }}"
+acpr_monitoring_oauth_proxy_image: "{{ cust_oauth_proxy_image | default(acpr_docker_registry_location + '/openshift3/oauth-proxy:' + acpr_os_version) }}"
+acpr_monitoring_prometheus_image: "{{ cust_prometheus_image | default(acpr_docker_registry_location + '/openshift3/prometheus:' + acpr_os_version) }}"
+acpr_monitoring_alertmanager_image: "{{ cust_alertmanager_image | default(acpr_docker_registry_location + '/openshift3/prometheus-alertmanager:' + acpr_os_version) }}"
+acpr_grafana_dashboard_image: "{{ cust_grafana_dashboard_image | default(acpr_docker_registry_location + '/openshift3/grafana:' + acpr_os_version) }}"
+
+# Additional namespaces which have access to the Prometheus pod
+#acpr_monitoring_prometheus_additional_network_policy_namespace_selector:
+#  - namespace-name
+
+# Prometheus Node exporter requests & limits
+acpr_monitoring_prometheus_node_exporter_resources_enable: true
+acpr_monitoring_prometheus_node_exporter_resources_request_cpu: 100m
+acpr_monitoring_prometheus_node_exporter_resources_request_memory: 32Mi
+acpr_monitoring_prometheus_node_exporter_resources_limit_cpu: 200m
+acpr_monitoring_prometheus_node_exporter_resources_limit_memory: 64Mi
+
+# Kube State metrics requests & limits
+acpr_monitoring_kube_state_metrics_resources_enable: true
+acpr_monitoring_kube_state_metrics_resources_request_cpu: 1024m
+acpr_monitoring_kube_state_metrics_resources_request_memory: 2048Mi
+acpr_monitoring_kube_state_metrics_resources_limit_cpu: 1024m
+acpr_monitoring_kube_state_metrics_resources_limit_memory: 2048Mi
+
+# Prometheus proxy requests & limits
+acpr_monitoring_prometheus_proxy_resources_enable: true
+acpr_monitoring_prometheus_proxy_resources_request_cpu: 10m
+acpr_monitoring_prometheus_proxy_resources_request_memory: 256Mi
+acpr_monitoring_prometheus_proxy_resources_limit_cpu: 50m
+acpr_monitoring_prometheus_proxy_resources_limit_memory: 256Mi
+
+# Prometheus requests & limits
+acpr_monitoring_prometheus_resources_request_enable: true
+acpr_monitoring_prometheus_resources_request_cpu: 500m
+acpr_monitoring_prometheus_resources_request_memory: 8Gi
+acpr_monitoring_prometheus_resources_limit_cpu: 2000m
+acpr_monitoring_prometheus_resources_limit_memory: 8Gi
+
+# Alertmanager proxy requests & limits
+acpr_monitoring_alertmanager_proxy_resources_enable: true
+acpr_monitoring_alertmanager_proxy_resources_request_cpu: 10m
+acpr_monitoring_alertmanager_proxy_resources_request_memory: 256Mi
+acpr_monitoring_alertmanager_proxy_resources_limit_cpu: 50m
+acpr_monitoring_alertmanager_proxy_resources_limit_memory: 256Mi
+
+# Alertmanager requests & limits
+acpr_monitoring_alertmanager_resources_enable: true
+acpr_monitoring_alertmanager_resources_request_cpu: 200m
+acpr_monitoring_alertmanager_resources_request_memory: 512Mi
+acpr_monitoring_alertmanager_resources_limit_cpu: 500m
+acpr_monitoring_alertmanager_resources_limit_memory: 512Mi
+
+# Grafana proxy requests & limits
+acpr_monitoring_grafana_proxy_resources_enable: true
+acpr_monitoring_grafana_proxy_resources_request_cpu: 10m
+acpr_monitoring_grafana_proxy_resources_request_memory: 256Mi
+acpr_monitoring_grafana_proxy_resources_limit_cpu: 50m
+acpr_monitoring_grafana_proxy_resources_limit_memory: 256Mi
+
+# Grafana requests & limits
+acpr_monitoring_grafana_resources_enable: true
+acpr_monitoring_grafana_resources_request_cpu: 75m
+acpr_monitoring_grafana_resources_request_memory: 256Mi
+acpr_monitoring_grafana_resources_limit_cpu: 200m
+acpr_monitoring_grafana_resources_limit_memory: 256Mi
+
+# Grafana dashboard provisioner requests & limits
+acpr_monitoring_grafana_dashboard_provisioner_resources_enable: true
+acpr_monitoring_grafana_dashboard_provisioner_resources_request_cpu: 50m
+acpr_monitoring_grafana_dashboard_provisioner_resources_request_memory: 1Gi
+acpr_monitoring_grafana_dashboard_provisioner_resources_limit_cpu: 250m
+acpr_monitoring_grafana_dashboard_provisioner_resources_limit_memory: 1Gi
+
+# Prometheus rule provisioner requests & limits
+acpr_monitoring_prometheus_rule_provisioner_resources_enable: true
+acpr_monitoring_prometheus_rule_provisioner_resources_request_cpu: 50m
+acpr_monitoring_prometheus_rule_provisioner_resources_request_memory: 512Mi
+acpr_monitoring_prometheus_ruled_provisioner_resources_limit_cpu: 200m
+acpr_monitoring_prometheus_rule_provisioner_resources_limit_memory: 512Mi
+
+# PersistentVolumeClaim storage size requests
+acpr_monitoring_grafana_pvc_size_request_log: 100Mi
+acpr_monitoring_grafana_pvc_size_request_library: 100Mi
+acpr_monitoring_grafana_pvc_size_request_dashboard: 100Mi
+acpr_monitoring_prometheus_pvc_size_request_data: 1Gi
+acpr_monitoring_prometheus_pvc_size_request_rule: 100Mi
+
+# PersistentVolumeClaim StorageClass
+#acpr_monitoring_grafana_pvc_storage_class_name_log:
+#acpr_monitoring_grafana_pvc_storage_class_name_library:
+#acpr_monitoring_grafana_pvc_storage_class_name_dashboard:
+#acpr_monitoring_prometheus_pvc_storage_class_name_data:
+#acpr_monitoring_prometheus_pvc_storage_class_name_rule:
+
+# PersistentVolumeClaim AccessModes
+acpr_monitoring_prometheus_pvc_access_modes_data:
+  - ReadWriteMany
+
+# Prometheus and Alertmanager additional authentication
+acpr_monitoring_prometheus_additional_auth:
+  serviceaccounts:
+    enabled: False
+  htpasswd:
+    hidden: False
+
+acpr_monitoring_alertmanager_additional_auth:
+  serviceaccounts:
+    enabled: False
+  htpasswd:
+    hidden: False

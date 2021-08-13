@@ -1,0 +1,54 @@
+apiVersion: v1
+baseDomain: {{ os_cluster_name.split('.')[1:]|join('.') }}
+{% if acpr_docker_http_proxy is defined or acpr_docker_https_proxy is defined %}
+proxy:
+  httpProxy: {{ acpr_docker_http_proxy }}
+  httpsProxy: {{ acpr_docker_https_proxy }}
+  noProxy: {{ acpr_docker_no_proxy }}
+{% endif %}
+{% if acpr_cluster_certificates.additionalTrustBundle.ca_certificate is defined %}
+additionalTrustBundle: |
+{{ acpr_cluster_certificates.additionalTrustBundle.ca_certificate | indent(width=4, indentfirst=True) }}
+{% endif %}
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: {{ acpr_cluster_nodes|selectattr('role', 'search', 'worker')|list|length }}
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: {{ os_cluster_name.split('.')[0] }}
+networking:
+  clusterNetwork:
+  - cidr: {{ acpr_clus_net_cidr }}
+    hostPrefix: {{ 32 - acpr_clus_subnet_length|int }}
+  networkType: OpenShiftSDN
+  serviceNetwork: 
+  - {{ acpr_clus_portal_cidr }}
+platform:
+{% if acpr_platform is defined and 'vsphere' in acpr_platform %}
+  vsphere:
+    vcenter: {{ acpr_platform.vsphere.vcenter }}
+    username: {{ acpr_platform.vsphere.username }}
+    password: {{ acpr_platform.vsphere.password }}
+    datacenter: {{ acpr_platform.vsphere.datacenter }}
+    defaultDatastore: {{ acpr_platform.vsphere.datastore }}
+{% else %}
+  none: {}
+{% endif %}
+fips: false
+pullSecret: '{{ acpr_pull_secret }}'
+{% if acpr_ssh_publickey is defined %}
+sshKey: '{{ acpr_ssh_publickey }}'
+{% endif %}
+{% if acpr_registry_location is defined %}
+imageContentSources:
+- mirrors:
+  - '{{ acpr_registry_location }}'
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - '{{ acpr_registry_location }}'
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+{% endif %}

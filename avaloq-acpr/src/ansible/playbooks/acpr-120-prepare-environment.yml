@@ -1,0 +1,44 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: Verify playbook compatibility with current ocp version
+  import_playbook: helper_playbooks/ocp_compatibility_check.yml
+  vars:
+    avq_ocp_compatibility: [3]
+
+- name: Verify user in 'acpr_cluster_credentials' variable has required type
+  import_playbook: helper_playbooks/cluster_credentials.yml
+  vars:
+    cluster_credentials_required_type: 'cluster-admin-user'
+  when: acpr_cluster_credentials is defined
+
+- name: import configure administration host client utilities
+  import_playbook: acpr-121-avaloq-configure-administration-host.yml
+  vars:
+    acpr_administration_host_installation_only: false
+
+- name: ACPR | Configure PGP key and Yum repositories
+  hosts: all
+  any_errors_fatal: true
+  gather_facts: false
+  roles:
+    - role: avaloq.acpr-repository
+
+- name: ACPR | Hosts environment preparation
+  hosts: nodes, new_nodes
+  any_errors_fatal: true
+  become: true
+  roles:
+    - avaloq.acpr-prepare-environments
+    - avaloq.acpr-docker

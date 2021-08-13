@@ -1,0 +1,121 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+- name: RH-7.1 | Use Security Context Constraints to prevent privileged containers from running
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.allow-privileged
+    value: [false]
+    state: absent
+
+- name: Anonymous authentication verification
+  block:
+  - name: RH-7.2.1 | Ensure anonymous-auth is not disabled
+    uri:
+      url: https://{{ inventory_hostname }}:8443/api/v1
+      status_code: 200
+      validate_certs: no
+
+  - name: RH-7.2.2 | Ensure anonymous-auth is not disabled
+    uri:
+      url: https://{{ inventory_hostname }}:8443/api/v1/services
+      status_code: 403
+      validate_certs: no
+  when: inventory_hostname in groups['masters']
+
+- name: RH-7.3 | Ensure that the --authorization-mode argument is set to WebHook
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.authorization-mode
+    state: absent
+
+- name: RH-7.4 | Ensure that the OpenShift default for the client-ca-file argument is not changed
+  yedit:
+    src: '{{ node_config_file }}'
+    key: servingInfo.clientCA
+    value: client-ca.crt
+    state: present
+
+- name: RH-7.5 | Maintain the OpenShift default setting for the read-only-port argument
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.read-only-port
+    state: absent
+
+- name: RH-7.6 | Maintain the OpenShift default setting for the streaming-connection-idle-timeout argument
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.streaming-connection-idle-timeout
+    value: ['{{ kubelet_streaming_timeout }}']
+    state: present
+  when: kubelet_streaming_timeout
+
+- name: RH-7.7 | Maintain the OpenShift defaults for the protect-kernel-defaults argument
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.protect-kernel-defaults
+    state: absent
+
+- name: RH-7.8 | Maintain the OpenShift default value of true for the make-iptables-util-chains argument
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.make-iptables-util-chains
+    state: absent
+
+- name: RH-7.9 | Ensure that the --keep-terminated-pod-volumes argument is set to false
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.keep-terminated-pod-volumes
+    state: absent
+
+- name: RH-7.10 | Maintain the OpenShift defaults for the hostname-override argument
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.hostname-override
+    state: absent
+
+- name: RH-7.11 | Configure the --event-qps argument to 0
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.event-qps
+    state: absent
+
+- name: RH-7.12.1 | Do not set the --tls-cert-file and --tls-private-key-file arguments
+  yedit:
+    src: '{{ node_config_file }}'
+    key: 'kubeletArguments.{{ item }}'
+    state: absent
+  loop:
+    - tls-private-key-file
+    - tls-cert-file
+
+- name: RH-7.12.2 | Do not set the --tls-cert-file and --tls-private-key-file arguments
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.cert-dir
+    value: [/etc/origin/node/certificates]
+    state: present
+
+- name: RH-7.13 | Maintain the OpenShift default of 0 for the cadvisor-port argument
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.cadvisor-port
+    state: absent
+
+- name: RH-7.14 / 7.15  | Ensure that the RotateKubelet.*Certificate argument is not set to false
+  yedit:
+    src: '{{ node_config_file }}'
+    key: kubeletArguments.feature-gates
+    value: ['RotateKubeletClientCertificate=true,RotateKubeletServerCertificate=true']
+    state: present

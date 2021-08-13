@@ -1,0 +1,158 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: v1
+kind: List
+items:
+
+  ### Service
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app: avaloq-prometheus-rule-provisioner
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+      name: avaloq-prometheus-rule-provisioner
+    spec:
+      ports:
+        - name: http
+          port: 9090
+          protocol: TCP
+          targetPort: 9090
+      selector:
+        app: avaloq-prometheus-rule-provisioner
+      sessionAffinity: None
+      type: ClusterIP
+
+  ### NetworkPolicy
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: avaloq-prometheus-rule-provisioner
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    spec:
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels:
+                  app: prometheus
+          ports:
+            - port: 9090
+              protocol: TCP
+      podSelector:
+        matchLabels:
+          app: avaloq-prometheus-rule-provisioner
+
+  ### Secret
+  - kind: Secret
+    apiVersion: v1
+    data:
+      PROMETHEUS_PASS: {{ prometheus_password | b64encode }}
+    metadata:
+      annotations:
+      name: provisioner-prometheus-password
+      labels:
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+    type: Opaque
+
+  ### Deployment
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: avaloq-prometheus-rule-provisioner
+      labels:
+        app: prometheus
+        avaloq.com/app: acpr-monitoring
+        app.kubernetes.io/component: monitoring
+        avaloq.com/zone: core-internal
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: avaloq-prometheus-rule-provisioner
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          annotations:
+            prometheus.io/path: /metrics
+            prometheus.io/port: '9090'
+            prometheus.io/scheme: http
+            prometheus.io/scrape: 'true'
+          labels:
+            app: avaloq-prometheus-rule-provisioner
+            avaloq.com/app: acpr-monitoring
+            app.kubernetes.io/component: monitoring
+        spec:
+          serviceAccountName: avaloq-prometheus-rule-provisioner
+          containers:
+            - name: avaloq-prometheus-rule-provisioner
+              image: {{ acpr_monitoring_prometheus_rule_provisioner_image }}
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: WATCHED_NAMESPACE
+                  value: "*"
+                - name: RULE_TYPES
+                  value: "infrastructure,application"
+                - name: FULL_RECONCILIATION_INTERVAL_S
+                  value: "3600"
+                - name: COLORS
+                  value: "false"
+                - name: METRICS
+                  value: "true"
+                - name: METRICS_JVM
+                  value: "true"
+                - name: METRICS_PORT
+                  value: "9090"
+                - name: PROMETHEUS_HOST
+                  value: "prometheus.{{ namespace }}.svc"
+                - name: PROMETHEUS_CERT
+                  value: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+                - name: PROMETHEUS_USER
+                  value: {{ prometheus_user }}
+              envFrom:
+                - secretRef:
+                    name: provisioner-prometheus-password
+              ports:
+                - containerPort: 9090
+                  name: http
+                  protocol: TCP
+{% if acpr_monitoring_prometheus_rule_provisioner_resources_enable %}
+              resources:
+                limits:
+                  cpu: {{ acpr_monitoring_prometheus_ruled_provisioner_resources_limit_cpu }}
+                  memory: {{ acpr_monitoring_prometheus_rule_provisioner_resources_limit_memory }}
+                requests:
+                  cpu: {{ acpr_monitoring_prometheus_rule_provisioner_resources_request_cpu }}
+                  memory: {{ acpr_monitoring_prometheus_rule_provisioner_resources_request_memory }}
+{% endif %}
+              volumeMounts:
+                - mountPath: /opt/avaloq/prometheus/rules
+                  name: prometheus-rules
+                - mountPath: /etc/tls/private
+                  name: prometheus-tls
+          nodeSelector:
+            node-role.kubernetes.io/compute: "true"
+          volumes:
+            - name: prometheus-rules
+              persistentVolumeClaim:
+                claimName: prometheus-rules-volume
+            - name: prometheus-tls
+              secret:
+                defaultMode: 420
+                secretName: prometheus-tls

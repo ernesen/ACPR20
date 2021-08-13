@@ -1,0 +1,43 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+# Wait 1h for kubelet bootstrap certificate (this gives time to provision)
+- name: Wait for a node provisioning - kube-apiserver-client-kubelet csr
+  shell: "set -o pipefail && oc get csr | awk '/.*kube-apiserver-client-kubelet.*Pending$/ {print $1}'" # noqa 301 - This task always needs to be run
+  environment:
+    KUBECONFIG: "{{ acpr_ocp4_installer_wd }}/auth/kubeconfig"
+  register: output
+  until: output.stdout.find("csr-") != -1
+  retries: 120
+  delay: 30
+
+- name: Include certificate approval
+  include_tasks: approve_kubelet_csr.yml
+  vars:
+    csr: "{{ output.stdout_lines[0] }}"
+
+# Wait 5min for kubelet serving certificate 
+- name: Wait for a node - kubelet-serving
+  shell: "set -o pipefail && oc get csr | awk '/.*kubelet-serving.*Pending$/ {print $1}'" # noqa 301 - This task always needs to be run
+  environment:
+    KUBECONFIG: "{{ acpr_ocp4_installer_wd }}/auth/kubeconfig"
+  register: output
+  until: output.stdout.find("csr-") != -1
+  retries: 30
+  delay: 10
+
+- name: Include certificate approval
+  include_tasks: approve_kubelet_csr.yml
+  vars:
+    csr: "{{ output.stdout_lines[0] }}"

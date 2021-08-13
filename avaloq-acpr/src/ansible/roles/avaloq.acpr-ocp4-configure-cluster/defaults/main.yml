@@ -1,0 +1,66 @@
+# Copyright 2019 Avaloq Evolution AG
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+avq_acpr_home: '{{ lookup("env", "HOME") }}/acpr/'
+avq_console_links:
+  HelpMenu:
+    - text: ACPR Documentation
+      url: 'https://docs.avaloq.com/acpr'
+  ApplicationMenu:
+    - text: Kibana
+      url: 'https://kibana-openshift-logging.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://kibana-openshift-logging.{{ acpr_os_def_subdomain }}/ui/favicons/favicon.ico'
+      section: 'Cluster Monitoring & Logging'
+    - text: Grafana
+      url: 'https://grafana-openshift-monitoring.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://grafana-openshift-monitoring.{{ acpr_os_def_subdomain }}/public/img/grafana_icon.svg'
+      section: 'Cluster Monitoring & Logging'
+    - text: Prometheus
+      url: 'https://prometheus-k8s-openshift-monitoring.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://prometheus-k8s-openshift-monitoring.{{ acpr_os_def_subdomain }}/static/img/favicon.ico'
+      section: 'Cluster Monitoring & Logging'
+    - text: Alertmanager
+      url: 'https://alertmanager-main-openshift-monitoring.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://alertmanager-main-openshift-monitoring.{{ acpr_os_def_subdomain }}/favicon.ico'
+      section: 'Cluster Monitoring & Logging'
+    - text: Grafana
+      url: 'https://grafana-acpr-monitoring.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://grafana-acpr-monitoring.{{ acpr_os_def_subdomain }}/public/img/grafana_icon.svg'
+      section: 'ACPR Monitoring'
+    - text: Prometheus
+      url: 'https://prometheus-acpr-monitoring.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://prometheus-acpr-monitoring.{{ acpr_os_def_subdomain }}/static/img/favicon.ico'
+      section: 'ACPR Monitoring'
+    - text: Alertmanager
+      url: 'https://alertmanager-acpr-monitoring.{{ acpr_os_def_subdomain }}'
+      imageurl: 'https://alertmanager-acpr-monitoring.{{ acpr_os_def_subdomain }}/favicon.ico'
+      section: 'ACPR Monitoring'
+
+acpr_operatorhub_catalogsources: {}
+avq_operatorhub_catalogsources:
+  acpr-redhat-operators:
+    displayname: Red Hat Operators
+    image: 'registry.service.avaloq.com/redhat/redhat-operator-index:v{{ acpr_os_release }}'
+  acpr-certified-operators:
+    displayname: Red Hat Certified Operators
+    image: 'registry.service.avaloq.com/redhat/certified-operator-index:v{{ acpr_os_release }}'
+  acpr-redhat-marketplace:
+    displayname: Red Hat Marketplace
+    image: 'registry.service.avaloq.com/redhat/redhat-marketplace-index:v{{ acpr_os_release }}'
+
+
+acpr_cluster_remove_kubeadmin: true
+acpr_self_provisioners: false
+acpr_imagepruner:
+  ignore_invalid_refs: false
